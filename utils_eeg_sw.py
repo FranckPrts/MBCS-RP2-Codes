@@ -33,8 +33,9 @@ class import_set_custom ():
         self.sw_min = sw_min
         self.sw_max = sw_max
         
-        self.df    = self.read_set_events(self.path)
-        self.df_sw = pd.DataFrame
+        self.df        = self.read_set_events(self.path)
+        self.df_sw     = pd.DataFrame
+        self.df_sw_mne = np.ndarray
         
         if sw_min and sw_max is not None:
             self.event_slider(self.sw_min, self.sw_max)
@@ -83,13 +84,16 @@ class import_set_custom ():
     def convert_to__MNE_event(self):
 
         events = self.df_sw
-        print(events)
 
         # Add the needed 'dontuse' column to `event_csv` dataframe before formating it for MNE
         # This column can also serve as a filter for bad events
         
+        # print(type(events))
+        # events_selected = pd.DataFrame
         events_selected = events.loc[:,['latency','epoch']]                 # select columns required by MNE
         events_selected['dontuse'] = 0                                      # Add necessary 'dontuse' column
         events_selected = events_selected[['latency', 'dontuse', 'epoch']]  # Reorder the columns
 
-        return events_selected
+        self.df_sw_mne = events_selected.to_numpy()
+
+        # return events_selected
