@@ -33,9 +33,12 @@ class read_dialogue ():
         self.sw_min = sw_min
         self.sw_max = sw_max
 
-        # Import JSON
+        # Import JSON https://www.freecodecamp.org/news/python-parse-json-how-to-read-a-json-file/
         with open(self.path, 'r') as json_file:
-            self.dialogue = json.load(json_file)
+            
+            # Get appropriate func
+            self.dialogue = json.loads(json_file)
+            # self.dialogue = json.loads(json_file)
             print(self.dialogue)
 
     def select_sw(self):
