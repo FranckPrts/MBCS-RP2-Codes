@@ -27,11 +27,9 @@ class read_dialogue ():
             Maximum boudary for the sliding window
     """
 
-    def __init__(self, path:str, sw_min:float, sw_max:float):
+    def __init__(self, path:str):
         
         self.path = path
-        self.sw_min = sw_min
-        self.sw_max = sw_max
 
         with open(self.path, 'r') as json_file:
             self.dialogue = json.load(json_file)
