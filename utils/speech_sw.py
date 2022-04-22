@@ -21,10 +21,7 @@ class read_dialogue ():
     Arguments:
         path: path
             Path to SET file (ablsolute or relative)
-        sw_min: float
-            Minimum boudary for the sliding window 
-        sw_mxn: float
-            Maximum boudary for the sliding window
+
     """
 
     def __init__(self, path:str):
