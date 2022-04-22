@@ -36,8 +36,18 @@ class read_dialogue ():
         with open(self.path, 'r') as json_file:
             self.dialogue = json.load(json_file)
 
-    def select_sw(self):
-        pass
+        # The JSON element that has all the words is the last
+        self.all_word_dict_idx = len(self.dialogue["results"]) - 1
+
+    def select_sw(self, sw_min:float, sw_max:float):
+                
+                for i in range(len(self.dialogue["results"][self.all_word_dict_idx]["alternatives"][0]["words"])):
+                    
+                    word = self.dialogue["results"][self.all_word_dict_idx]["alternatives"][0]["words"][i]                  
+                    if sw_min <= float(word["startTime"][:-1]) and float(word["startTime"][:-1]) <= sw_max:
+                        print(word["word"])
+
+
 
     def tokenize_dialogue(self):
         pass
