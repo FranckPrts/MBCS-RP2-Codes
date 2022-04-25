@@ -12,7 +12,13 @@ returns the difference.
 # Imports 
 import json
 
-class read_dialogue ():
+import numpy as np
+
+from flair.embeddings import TransformerWordEmbeddings
+from flair.data import Sentence
+
+
+class read_dialogue:
     
     """
     Implementing semantic similarity computation between each contribution
@@ -21,31 +27,72 @@ class read_dialogue ():
     Arguments:
         path: path
             Path to SET file (ablsolute or relative)
-
+        sw_min: float
+            Minimum boudary for the sliding window 
+        sw_mxn: float
+            Maximum boudary for the sliding window
     """
 
-    def __init__(self, path:str):
+    def __init__(self, path:str, sw_min:float, sw_max:float):
         
         self.path = path
-
+        self.sw_min = sw_min
+        self.sw_max = sw_max
+        
         with open(self.path, 'r') as json_file:
             self.dialogue = json.load(json_file)
 
         # The JSON element that has all the words is the last
         self.all_word_dict_idx = len(self.dialogue["results"]) - 1
 
-    def select_sw(self, sw_min:float, sw_max:float):
-                
-                for i in range(len(self.dialogue["results"][self.all_word_dict_idx]["alternatives"][0]["words"])):
-                    
-                    word = self.dialogue["results"][self.all_word_dict_idx]["alternatives"][0]["words"][i]                  
-                    if sw_min <= float(word["startTime"][:-1]) and float(word["startTime"][:-1]) <= sw_max:
-                        print(word["word"])
+        self.speech_sub1, self.speech_sub2 = self.select_sw()
 
+    def select_sw(self):
+
+        sub1 = list()
+        sub2 = list()
+
+        for i in range(len(self.dialogue["results"][self.all_word_dict_idx]["alternatives"][0]["words"])):
+            
+            word = self.dialogue["results"][self.all_word_dict_idx]["alternatives"][0]["words"][i]
+
+            if self.sw_min <= float(word["startTime"][:-1]) and float(word["endTime"][:-1]) <= self.sw_max:
+                
+                # Log in console
+                print("[%f - %f] \tSpeacker: %s \t\tWord: %s" % (float(word["startTime"][:-1]), float(word["endTime"][:-1]), word["speakerTag"], word["word"]))
+
+                # Save both speacker words in an array
+                if word["speakerTag"] == 1:
+                    sub1.append(word["word"])
+                if word["speakerTag"] == 2:
+                    sub2.append(word["word"])
+        
+        return sub1, sub2
 
 
     def tokenize_dialogue(self):
-        pass
+        sub1 = ' '.join(self.speech_sub1)
+        sub2 = ' '.join(self.speech_sub2)
+
+        embedding1 = TransformerWordEmbeddings()
+        embedding2 = TransformerWordEmbeddings()
+
+        sent1 = Sentence(sub1, use_tokenizer=True)
+        sent2 = Sentence(sub2, use_tokenizer=True)
+
+        embedding1.embed(sent1)
+        embedding2.embed(sent2)
+
+        sent1_em = np.array([s.embedding.cpu().numpy() for s in sent1])
+        sent2_em = np.array([s.embedding.cpu().numpy() for s in sent2])
+
+        print(type(sent1_em))
+        print(len(sent1_em))
+        
+        print(type(sent2_em))
+        print(len(sent2_em))
+        
+        # sent_avg = np.mean(sent1_em, axis=0)
 
     def compute_semantic_similarity(self):
         pass
