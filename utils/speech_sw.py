@@ -45,7 +45,12 @@ class read_dialogue:
         # The JSON element that has all the words is the last
         self.all_word_dict_idx = len(self.dialogue["results"]) - 1
 
-        self.speech_sub1, self.speech_sub2 = self.select_sw()
+        # Make list with the woed spocken by each subject within
+        # the given time window
+        self.sub1_speech_list, self.sub2_speech_list = self.select_sw()
+
+        # Embed each sentence
+        self.sub1_speech_embed, self.sub2_speech_embed = self.embed_dialogue()
 
     def select_sw(self):
 
@@ -70,9 +75,9 @@ class read_dialogue:
         return sub1, sub2
 
 
-    def tokenize_dialogue(self):
-        sub1 = ' '.join(self.speech_sub1)
-        sub2 = ' '.join(self.speech_sub2)
+    def embed_dialogue(self):
+        sub1 = ' '.join(self.sub1_speech_list)
+        sub2 = ' '.join(self.sub2_speech_list)
 
         embedding1 = TransformerWordEmbeddings()
         embedding2 = TransformerWordEmbeddings()
@@ -86,15 +91,10 @@ class read_dialogue:
         sent1_em = np.array([s.embedding.cpu().numpy() for s in sent1])
         sent2_em = np.array([s.embedding.cpu().numpy() for s in sent2])
 
-        print(type(sent1_em))
-        print(len(sent1_em))
-        
-        print(type(sent2_em))
-        print(len(sent2_em))
-        
-        # sent_avg = np.mean(sent1_em, axis=0)
+        return sent1_em, sent2_em
 
     def compute_semantic_similarity(self):
+        # sent_avg = np.mean(sent1_em, axis=0)
         pass
 
     def count_turn_taking(self):
