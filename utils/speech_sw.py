@@ -16,6 +16,7 @@ import numpy as np
 
 from flair.embeddings import TransformerWordEmbeddings
 from flair.data import Sentence
+from transformers import PrinterCallback
 
 
 class read_dialogue:
@@ -33,11 +34,9 @@ class read_dialogue:
             Maximum boudary for the sliding window
     """
 
-    def __init__(self, path:str, sw_min:float, sw_max:float):
+    def __init__(self, path:str):
         
         self.path = path
-        self.sw_min = sw_min
-        self.sw_max = sw_max
         
         with open(self.path, 'r') as json_file:
             self.dialogue = json.load(json_file)
@@ -45,23 +44,18 @@ class read_dialogue:
         # The JSON element that has all the words is the last
         self.all_word_dict_idx = len(self.dialogue["results"]) - 1
 
-        # Make list with the woed spocken by each subject within
-        # the given time window
-        self.sub1_speech_list, self.sub2_speech_list = self.select_sw()
-
-        # Embed each sentence
-        self.sub1_speech_embed, self.sub2_speech_embed = self.embed_dialogue()
-
-    def select_sw(self):
+    def select_sw(self, sw_min:float, sw_max:float):
 
         sub1 = list()
         sub2 = list()
+
+        print("Using %f %f time window\nStarting dialogue extraction ..." % (sw_min, sw_max))
 
         for i in range(len(self.dialogue["results"][self.all_word_dict_idx]["alternatives"][0]["words"])):
             
             word = self.dialogue["results"][self.all_word_dict_idx]["alternatives"][0]["words"][i]
 
-            if self.sw_min <= float(word["startTime"][:-1]) and float(word["endTime"][:-1]) <= self.sw_max:
+            if sw_min <= float(word["startTime"][:-1]) and float(word["endTime"][:-1]) <= sw_max:
                 
                 # Log in console
                 print("[%f - %f] \tSpeacker: %s \t\tWord: %s" % (float(word["startTime"][:-1]), float(word["endTime"][:-1]), word["speakerTag"], word["word"]))
@@ -72,10 +66,14 @@ class read_dialogue:
                 if word["speakerTag"] == 2:
                     sub2.append(word["word"])
         
-        return sub1, sub2
+        self.sub1_speech_list, self.sub2_speech_list = sub1, sub2
+        print("Dialogue extracted.")
 
 
     def embed_dialogue(self):
+
+        print("Starting dialogue embeding ...")
+
         sub1 = ' '.join(self.sub1_speech_list)
         sub2 = ' '.join(self.sub2_speech_list)
 
@@ -91,7 +89,8 @@ class read_dialogue:
         sent1_em = np.array([s.embedding.cpu().numpy() for s in sent1])
         sent2_em = np.array([s.embedding.cpu().numpy() for s in sent2])
 
-        return sent1_em, sent2_em
+        self.sub1_speech_embed, self.sub2_speech_embed = sent1_em, sent2_em
+        print("Dialogue embeded.")
 
     def compute_semantic_similarity(self):
         # sent_avg = np.mean(sent1_em, axis=0)
