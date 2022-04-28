@@ -11,6 +11,7 @@ returns the difference.
 
 # Imports 
 import json
+# from cv2 import mean
 
 import numpy as np
 
@@ -18,6 +19,10 @@ from flair.embeddings import TransformerWordEmbeddings
 from flair.data import Sentence
 from transformers import PrinterCallback
 
+import gensim.downloader as api
+
+# Compute cosine disctance between 1-D vector https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.cosine.html?highlight=cosine#scipy.spatial.distance.cosine
+from scipy import spatial
 
 class read_dialogue:
     
@@ -73,28 +78,38 @@ class read_dialogue:
     def embed_dialogue(self):
 
         print("Starting dialogue embeding ...")
+       
+        wtov = api.load('word2vec-google-news-300')
+        
+        # for  TO COMPLETE w/ try and exept
+            # s1 = wtov[self.sub1_speech_list]
+            # s2 = wtov[self.sub2_speech_list]
 
-        sub1 = ' '.join(self.sub1_speech_list)
-        sub2 = ' '.join(self.sub2_speech_list)
+        # sub1 = ' '.join(self.sub1_speech_list)
+        # sub2 = ' '.join(self.sub2_speech_list)
 
-        embedding1 = TransformerWordEmbeddings()
-        embedding2 = TransformerWordEmbeddings()
+        # embedding1 = TransformerWordEmbeddings()
+        # embedding2 = TransformerWordEmbeddings()
 
-        sent1 = Sentence(sub1, use_tokenizer=True)
-        sent2 = Sentence(sub2, use_tokenizer=True)
+        # sent1 = Sentence(sub1, use_tokenizer=True)
+        # sent2 = Sentence(sub2, use_tokenizer=True)
 
-        embedding1.embed(sent1)
-        embedding2.embed(sent2)
+        # embedding1.embed(sent1)
+        # embedding2.embed(sent2)
 
-        sent1_em = np.array([s.embedding.cpu().numpy() for s in sent1])
-        sent2_em = np.array([s.embedding.cpu().numpy() for s in sent2])
+        # sent1_em = np.array([s.embedding.cpu().numpy() for s in sent1])
+        # sent2_em = np.array([s.embedding.cpu().numpy() for s in sent2])
 
-        self.sub1_speech_embed, self.sub2_speech_embed = sent1_em, sent2_em
+        self.sub1_speech_embed, self.sub2_speech_embed = s1, s2
         print("Dialogue embeded.")
 
     def compute_semantic_similarity(self):
-        # sent_avg = np.mean(sent1_em, axis=0)
-        pass
+        
+        # Average all the words of a sentence 
+        self.s1_speech_embed_avr = np.mean(self.sub1_speech_embed, axis=0)
+        self.s2_speech_embed_avr = np.mean(self.sub2_speech_embed, axis=0)
+        
+        self.sem_sim = 1 - spatial.distance.cosine(self.s1_speech_embed_avr, self.s2_speech_embed_avr)
 
     def count_turn_taking(self):
         pass
