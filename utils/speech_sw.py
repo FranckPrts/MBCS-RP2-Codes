@@ -17,6 +17,7 @@ import numpy as np
 
 from flair.embeddings import TransformerWordEmbeddings
 from flair.data import Sentence
+from sympy import EX
 from transformers import PrinterCallback
 
 import gensim.downloader as api
@@ -54,7 +55,7 @@ class read_dialogue:
         sub1 = list()
         sub2 = list()
 
-        print("Using %f %f time window\nStarting dialogue extraction ..." % (sw_min, sw_max))
+        print(">> Using %f %f time window\nStarting dialogue extraction ..." % (sw_min, sw_max))
 
         for i in range(len(self.dialogue["results"][self.all_word_dict_idx]["alternatives"][0]["words"])):
             
@@ -72,18 +73,37 @@ class read_dialogue:
                     sub2.append(word["word"])
         
         self.sub1_speech_list, self.sub2_speech_list = sub1, sub2
-        print("Dialogue extracted.")
+        print(">> Dialogue extracted.")
 
 
     def embed_dialogue(self):
 
-        print("Starting dialogue embeding ...")
+        print(">> Starting dialogue embeding ...")
        
         wtov = api.load('word2vec-google-news-300')
         
-        # for  TO COMPLETE w/ try and exept
-            # s1 = wtov[self.sub1_speech_list]
-            # s2 = wtov[self.sub2_speech_list]
+        s1 = list()
+        s2 = list()
+        
+        print(">> Embeding S1 ...")
+        for  word in self.sub1_speech_list:
+            try:
+                print(word)
+                s1.append(wtov[word])
+            except Exception as e :
+                print(e)
+                pass    
+        print(">> Done.")
+
+        print(">> Embeding S2 ...")
+        for  word in self.sub2_speech_list:
+            try:
+                print(word)
+                s2.append(wtov[word])
+            except Exception as e :
+                print(e)
+                pass    
+        print(">> Done.")
 
         # sub1 = ' '.join(self.sub1_speech_list)
         # sub2 = ' '.join(self.sub2_speech_list)
@@ -101,7 +121,7 @@ class read_dialogue:
         # sent2_em = np.array([s.embedding.cpu().numpy() for s in sent2])
 
         self.sub1_speech_embed, self.sub2_speech_embed = s1, s2
-        print("Dialogue embeded.")
+        print(">> Dialogue embeded.")
 
     def compute_semantic_similarity(self):
         
