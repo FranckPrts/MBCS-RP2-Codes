@@ -55,7 +55,7 @@ class read_dialogue:
         sub1 = list()
         sub2 = list()
 
-        print(">> Using %f %f time window\nStarting dialogue extraction ..." % (sw_min, sw_max))
+        print(">> Starting dialogue extraction ...\n>> Time window [%f - %f] " % (sw_min, sw_max))
 
         for i in range(len(self.dialogue["results"][self.all_word_dict_idx]["alternatives"][0]["words"])):
             
@@ -64,7 +64,7 @@ class read_dialogue:
             if sw_min <= float(word["startTime"][:-1]) and float(word["endTime"][:-1]) <= sw_max:
                 
                 # Log in console
-                print("[%f - %f] \tSpeacker: %s \t\tWord: %s" % (float(word["startTime"][:-1]), float(word["endTime"][:-1]), word["speakerTag"], word["word"]))
+                print("[%f - %f] \tSpeaker: %s \t\tWord: %s" % (float(word["startTime"][:-1]), float(word["endTime"][:-1]), word["speakerTag"], word["word"]))
 
                 # Save both speacker words in an array
                 if word["speakerTag"] == 1:
@@ -76,49 +76,59 @@ class read_dialogue:
         print(">> Dialogue extracted.")
 
 
-    def embed_dialogue(self):
-
-        print(">> Starting dialogue embeding ...")
+    def embed_dialogue_wtov(self):
+        print(">> Starting dialogue embeding w/ w2v ...")
        
         wtov = api.load('word2vec-google-news-300')
         
-        s1 = list()
-        s2 = list()
+        s1, s2 = list(), list()
+        not_embeded = dict()
         
-        print(">> Embeding S1 ...")
+        print("\n>> Embeding S1 ...")
         for  word in self.sub1_speech_list:
             try:
-                print(word)
+                print("embeding: ", word)
                 s1.append(wtov[word])
             except Exception as e :
-                print(e)
+                print("> Word not embeded : %s" % word)
+                not_embeded[word] = "S1"
+                print("> Error: %s" % e)
                 pass    
         print(">> Done.")
 
-        print(">> Embeding S2 ...")
+        print("\n>> Embeding S2 ...")
         for  word in self.sub2_speech_list:
             try:
-                print(word)
+                print("embeding: ", word)
                 s2.append(wtov[word])
             except Exception as e :
-                print(e)
+                print("> Word not embeded : %s" % word)
+                not_embeded[word] = "S2"
+                print("> Error: %s" % e)
                 pass    
         print(">> Done.")
 
-        # sub1 = ' '.join(self.sub1_speech_list)
-        # sub2 = ' '.join(self.sub2_speech_list)
+        self.not_embeded = not_embeded
+        self.sub1_speech_embed, self.sub2_speech_embed = s1, s2
+        print(">> Dialogue embeded.")
+    
+    def embed_dialogue_bert(self):
+        print(">> Starting dialogue embeding w/ BERT ...")
+        
+        sub1 = ' '.join(self.sub1_speech_list)
+        sub2 = ' '.join(self.sub2_speech_list)
 
-        # embedding1 = TransformerWordEmbeddings()
-        # embedding2 = TransformerWordEmbeddings()
+        embedding1 = TransformerWordEmbeddings()
+        embedding2 = TransformerWordEmbeddings()
 
-        # sent1 = Sentence(sub1, use_tokenizer=True)
-        # sent2 = Sentence(sub2, use_tokenizer=True)
+        sent1 = Sentence(sub1, use_tokenizer=True)
+        sent2 = Sentence(sub2, use_tokenizer=True)
 
-        # embedding1.embed(sent1)
-        # embedding2.embed(sent2)
+        embedding1.embed(sent1)
+        embedding2.embed(sent2)
 
-        # sent1_em = np.array([s.embedding.cpu().numpy() for s in sent1])
-        # sent2_em = np.array([s.embedding.cpu().numpy() for s in sent2])
+        s1 = np.array([s.embedding.cpu().numpy() for s in sent1])
+        s2 = np.array([s.embedding.cpu().numpy() for s in sent2])
 
         self.sub1_speech_embed, self.sub2_speech_embed = s1, s2
         print(">> Dialogue embeded.")
