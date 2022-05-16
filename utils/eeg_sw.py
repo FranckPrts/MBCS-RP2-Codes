@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
+# @author Franck Porteous https://github.com/FranckPrts
 
 '''
 Tools to import an EEG SET file (EEGLAB) into MNE without losing on the 
@@ -61,7 +62,7 @@ class import_set_custom ():
         """
 
         EEG = loadmat(path, uint16_codec='latin1',
-                    struct_as_record=False, squeeze_me=True)['EEG']
+                    struct_as_record=False, squeeze_me=True, appendmat=False)['EEG']
         flds = [f for f in dir(EEG.event[0]) if not f.startswith('_')]
         events = EEG.event
         df_dict = dict()
@@ -77,12 +78,23 @@ class import_set_custom ():
         
         return df.loc[:, take_fields]
     
-    def event_slider(self, sw_min:float, sw_max:float):    
-        assert(sw_min < sw_max), "sw_min < sw_max"
+    def event_slider(self, sw_min:float, sw_max:float):
+        self.sw_min, self.sw_max = sw_min, sw_max  # Re-assigning sw_min, sw_max in case the first class instentiation didn't
+        assert(sw_min < sw_max), "sw_min < sw_max" 
         self.df_sw = self.df.loc[(self.df['epoch_id'] >= sw_min) & (self.df['epoch_id'] <= sw_max)]
     
-    def convert_to__MNE_event(self):
+    def convert_EEG_to_MNE(self):
 
+        print("Converting EEG data to mne.Raw ..."
+        "\n\tUsing effective time window [{} - {}]"
+        "\n\tHere, from epoch #{} to #{}.".format(
+            self.sw_min, self.sw_max,
+            self.df_sw["epoch"].iat[0], self.df_sw["epoch"].iat[-1]))
+        
+        self.custom_event_to_MNE()
+        self.create_custom_metadata()        
+
+    def custom_event_to_MNE(self):
         events = self.df_sw
 
         # Add the needed 'dontuse' column to `event_csv` dataframe before formating it for MNE
@@ -96,4 +108,5 @@ class import_set_custom ():
 
         self.df_sw_mne = events_selected.to_numpy()
 
-        # return events_selected
+    def create_custom_metadata(self):
+            pass

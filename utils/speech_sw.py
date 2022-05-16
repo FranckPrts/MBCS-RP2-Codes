@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
+# @author Franck Porteous
 
 '''
 Tools to import an speech transcription (dialogues in JSON format),
