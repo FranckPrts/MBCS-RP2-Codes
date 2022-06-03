@@ -8,6 +8,7 @@ metadata that would be stored in the MataLab EEG.event struct.
 
 '''
 
+import mne
 import numpy as np
 import pandas as pd
 
@@ -28,7 +29,7 @@ class import_set_custom ():
             Maximum boudary for the sliding window
     """
 
-    def __init__(self, path:str, sw_min:float, sw_max:float):
+    def __init__(self, path:str, sw_min:float, sw_max:float, ch_to_keep:list):
         
         self.path = path
         self.sw_min = sw_min
@@ -41,11 +42,36 @@ class import_set_custom ():
         if sw_min and sw_max is not None:
             self.event_slider(self.sw_min, self.sw_max)
 
+        self.ch_to_keep = ch_to_keep
+
+        # reading the epoch file
+        self.eeg = mne.io.read_epochs_eeglab(self.path).pick_channels(self.ch_to_keep, ordered=False)
+        # selecting channels of interest
+        # self.eeg = self.eeg.copy()
+
+    def create_epoch(self):
+        epochs_S1 = mne.Epochs(
+            
+            raw=raw_parent, 
+            events=events,
+            event_id=event_id,
+
+            tmin=epochs_tmin, tmax=epochs_tmax,
+            
+            metadata=metadata,
+            
+            event_repeated= 'merge',
+            baseline=None,
+
+            # reject=reject, 
+            preload=True)
+
+        pass
     
     def read_set_events(self, path, ignore_fields=None):
         
         """
-        Open set file, read events and turn them into a dataframe
+        Open set file, read EEG.event struct and turn it into a pandas.df.
 
         Arguments:
             filename: str
@@ -109,4 +135,20 @@ class import_set_custom ():
         self.df_sw_mne = events_selected.to_numpy()
 
     def create_custom_metadata(self):
-            pass
+            event_id = {}
+            meta_tmin, meta_tmax = 0.0, 1.0 # In seconds
+
+            # Define our ecode of interrest 
+            # ecodeOI = ['10022', '501024']
+
+            metadata, events, event_id = mne.epochs.make_metadata(
+                
+                events=self.df_sw_mne,
+                event_id=event_id,
+                tmin= meta_tmin, tmax= meta_tmax,
+                # row_events=ecodeOI, # select only event of choices
+                )
+
+            events = events.astype(int)
+
+            metadata.head()
