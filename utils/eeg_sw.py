@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # coding=utf-8
-# @author Franck Porteous https://github.com/FranckPrts
+# @author Franck Porteous <franck.porteous@proton.me>
 
 '''
 Tools to import an EEG SET file (EEGLAB) into MNE without losing on the 
 metadata that would be stored in the MataLab EEG.event struct.
 
+The class also read SET files and enalbe selecting data falling in a sliding window.
 '''
 
 import mne
