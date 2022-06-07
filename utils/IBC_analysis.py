@@ -20,19 +20,20 @@ def get_analysis_manifest(data_path:str, condition:list):
     
     for condi in condition : # loop through condition
 
-        analysis_manifest[condi]=dict()  # Instantiate a key for condition
+        verbose_condition = condi.split('_')[1]
+        analysis_manifest[verbose_condition]=dict()  # Instantiate a key for condition
 
         for file in os.listdir(data_path+condi):       # Per condition
             if file.endswith(".set"):                  # Only look for SET files
                 dyad = int(file.split('_')[4][0:-1]) /2      # find files' dyad 
                 dyad = str(dyad)[:-2]
 
-                if dyad not in  analysis_manifest[condi]:
-                    analysis_manifest[condi][dyad] = []
-                    analysis_manifest[condi][dyad].append(file)
+                if dyad not in  analysis_manifest[verbose_condition]:
+                    analysis_manifest[verbose_condition][dyad] = []
+                    analysis_manifest[verbose_condition][dyad].append(file)
                     
                 else:
-                    analysis_manifest[condi][dyad].append(file)
+                    analysis_manifest[verbose_condition][dyad].append(file)
 
     # info print
     print("Available condition", analysis_manifest.keys())
@@ -41,6 +42,6 @@ def get_analysis_manifest(data_path:str, condition:list):
         print(analysis_manifest[i].keys())
     
     print("\nThe dyads that are present in on conditions only: ")
-    print(list(set(analysis_manifest[condition[1]]).difference(analysis_manifest[condition[0]])))
+    print(list(set(analysis_manifest[condition[1].split('_')[1]]).difference(analysis_manifest[condition[0].split('_')[1]])))
     
     return analysis_manifest
