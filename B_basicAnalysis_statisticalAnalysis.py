@@ -9,7 +9,7 @@ import json
 import matplotlib
 import mne
 import numpy as np
-
+import scipy
 # Import custom tools
 from utils import basicAnalysis_tools
 
@@ -42,13 +42,12 @@ avail_dyad = list(set(df_manifest[condition[1]]).intersection(df_manifest[condit
 
 epo1 = mne.io.read_epochs_eeglab(eeg_sampl).pick_channels(ch_to_keep, ordered=False)
 
-psd1, psd2 = np.load("{}results_psds/dyad_{}_condition_{}_psds.npy".format(data_path, dyad, conditions))
-
 ###################### TMP
 conditions = 'NS'
 dyad = '13'
 ###################### TMP
 
+psd1, psd2 = np.load("{}results_psds/dyad_{}_condition_{}_psds.npy".format(data_path, dyad, conditions))
 
 #%% 
 # STATISTICS ################################################################################

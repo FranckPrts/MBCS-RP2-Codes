@@ -3,10 +3,13 @@ Codes I wrote/use in the context of my second internship at the Brain and Cognit
 
 This folder is structured as such:<br>
 .<br>
+├── A_basicAnalysis_connectivity.py<br>
+├── B_basicAnalysis_statisticalAnalysis.py<br>
 ├── README.md<br>
-├── analysis_eeg.ipynb<br>
-├── analysis_speech.ipynb<br>
-├── find_dropped_epochs.py<br>
+├── sw_analysis_eeg.ipynb<br>
+├── sw_analysis_speech.ipynb<br>
 └── utils<br>
+    ├── basicAnalysis_tools.py<br>
     ├── eeg_sw.py<br>
+    ├── find_dropped_epochs.py<br>
     └── speech_sw.py<br>
