@@ -8,11 +8,6 @@ import os
 import pandas as pd
 from scipy.io import loadmat
 
-# EEG
-import mne
-
-# IBC toolbox
-from hypyp import analyses
 
 def get_analysis_manifest(data_path:str, condition:list):
     

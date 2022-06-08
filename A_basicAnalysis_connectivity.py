@@ -11,7 +11,10 @@ from hypyp import viz
 import mne
 import numpy as np
 # Import custom tools
-from utils import IBC_analysis
+from utils import basicAnalysis_tools
+
+mne.set_log_level('warning')
+# matplotlib.use('Qt5Agg')
 
 # Define paths and global variables
 data_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/EEG_data_cleaned/"
@@ -53,7 +56,7 @@ freq_bands = {'Theta': [4, 7],
 freq_bands = OrderedDict(freq_bands)
 
 # Get analysis manifest
-df_manifest = IBC_analysis.get_analysis_manifest(data_path, expConditionDir)
+df_manifest = basicAnalysis_tools.get_analysis_manifest(data_path, expConditionDir)
 
 #%% 
 for condition in df_manifest.keys(): 
@@ -124,10 +127,10 @@ for condition in df_manifest.keys():
         
         np.save(save_path+c_value+"dyad_"+dyad+"_condition_"+condition+"_intra_cohenD.npy", result_intra, allow_pickle=True)
         
+
         #######################
         ##     if no ICA     ##   Un-comment the block bellow
         #######################
-
 
         # ################# MVAR #####################################################
         # # Computing frequency- and time-frequency-domain connectivity measures obtained by MVARICA approach, based on MVAR models' coefficients. For instance: PDC measure, with MVAR model of order 2, extended infomax ICA method and checking the MVAR model stability.
@@ -180,9 +183,3 @@ for condition in df_manifest.keys():
         #     no_ICA_result_intra.append(mvar_C_intra)
 
         print('- - > Done.')
-
-# %%
-# viz.viz_2D_topomap_inter(epo1, epo2, C, threshold='auto', steps=10, lab=True)
-
-#%%
-# viz.viz_3D_inter(epo1, epo2, C, threshold='auto', steps=10, lab=False)
