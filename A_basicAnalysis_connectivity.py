@@ -6,10 +6,13 @@
 from collections import OrderedDict
 
 from hypyp import analyses
-from hypyp import viz
+from hypyp import viz, stats
+
+import json
 
 import mne
 import numpy as np
+
 # Import custom tools
 from utils import basicAnalysis_tools
 
@@ -56,7 +59,7 @@ freq_bands = {'Theta': [4, 7],
 freq_bands = OrderedDict(freq_bands)
 
 # Get analysis manifest
-df_manifest = basicAnalysis_tools.get_analysis_manifest(data_path, expConditionDir)
+df_manifest = basicAnalysis_tools.get_analysis_manifest(data_path, expConditionDir, save_to=save_path)
 
 #%% 
 for condition in df_manifest.keys(): 
@@ -64,7 +67,7 @@ for condition in df_manifest.keys():
     print("- - > Doing condition {} ...".format(condition))
 
     # for dyad in df_manifest[condition].keys(): TODO
-    for dyad in ['21', '13']:
+    for dyad in ['13']:
         print("- - - > Doing dyad {} ...".format(dyad))
 
         # Load participant's EEG #####################################################################
@@ -182,4 +185,41 @@ for condition in df_manifest.keys():
         #     # can also sample CSD values directly for statistical analyses
         #     no_ICA_result_intra.append(mvar_C_intra)
 
+        # STATISTICS ################################################################################
+        # <<<1>>> MNE test without any correction
+        # psd1_mean = np.mean(psd1.psd, axis=1)
+        # psd2_mean = np.mean(psd2.psd, axis=1)
+        # X = np.array([psd1_mean, psd2_mean])
+
+        # T_obs, p_values, H0 = mne.stats.permutation_t_test(X=X, n_permutations=5000,
+        #                                                 tail=0, n_jobs=1)
+
+        # # <<<2>>> Computes statistical t test on participant measure (e.g. PSD) for a condition.
+        # statsCondTuple = stats.statsCond(data=np.array([psd1, psd2]),
+        #                                 epochs=epo1,
+        #                                 n_permutations=5000,
+        #                                 alpha=0.05)
+        #                                 # T_obs, p_values, H0, adj_p, T_obs_plot
+        # # viz.plot_significant_sensors(T_obs_plot=statsCondTuple.T_obs_plot, epochs=epo1)
+
+        # # <<<3>>> Non-parametric cluster-based permutations 
+        # # Creating matrix of a priori connectivity between channels across space and frequencies based on their position, in the Alpha_Low band for example
+        # con_matrixTuple = stats.con_matrix(epo1, freqs_mean=psd1.freq_list)
+        # ch_con_freq = con_matrixTuple.ch_con_freq
+
+        # # Creating two fake groups with twice the 'participant1' and twice the 'participant2'
+        # data_group = [np.array([psd1.psd, psd1.psd]), np.array([psd2.psd, psd2.psd])]
+
+        # statscondCluster = stats.statscondCluster(data=data_group,
+        #                                         freqs_mean=psd1.freq_list,
+        #                                         ch_con_freq=scipy.sparse.bsr_matrix(ch_con_freq),
+        #                                         tail=0,
+        #                                         n_permutations=5000,
+        #                                         alpha=0.05)
+
+
         print('- - > Done.')
+
+
+        print
+# %%
