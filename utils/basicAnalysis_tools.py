@@ -63,3 +63,21 @@ def get_analysis_manifest(data_path:str, condition:list, save_to:str = None):
         f.close()
 
     return analysis_manifest
+
+reject_ch_manifest = dict()
+
+def add_reject_ch_manifest(condition:str, dyad:str, sub_fname, reject:list, save_to:str = None):
+    
+    if condition not in reject_ch_manifest.keys():
+        reject_ch_manifest[condition] = dict()
+    if dyad not in reject_ch_manifest[condition].keys():
+        reject_ch_manifest[condition][dyad] = dict()
+    
+    reject_ch_manifest[condition][dyad] = (sub_fname, reject)
+
+    json_string = json.dumps(reject_ch_manifest)
+    f = open(save_to+"reject_ch_manifest.json","w")
+    f.write(json_string)
+    f.close()
+
+    print(">> Reject of {} for {} (dyad {}) in condition {}".format(reject, sub_fname, dyad, condition))

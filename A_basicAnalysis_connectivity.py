@@ -66,25 +66,41 @@ for condition in df_manifest.keys():
 # for condition in ['SNS_ES_cleaned']:
     print("- - > Doing condition {} ...".format(condition))
 
-    # for dyad in df_manifest[condition].keys(): TODO
-    for dyad in ['13']:
+    for dyad in df_manifest[condition].keys():
+    # for dyad in ['36']:
         print("- - - > Doing dyad {} ...".format(dyad))
 
         # Load participant's EEG #####################################################################
         epo1 = mne.io.read_epochs_eeglab(data_path+'SNS_'+condition+'_cleaned/'+df_manifest[condition][dyad][0]).pick_channels(ch_to_keep, ordered=False)
         epo2 = mne.io.read_epochs_eeglab(data_path+'SNS_'+condition+'_cleaned/'+df_manifest[condition][dyad][1]).pick_channels(ch_to_keep, ordered=False)
 
-        print("\nEqualizing participant's epoch count: ")
+        # Sanity check area ##########################################################################
+        print("\nVerify equal epoch count: ")
         mne.epochs.equalize_epoch_counts([epo1, epo2])
+
+        print("\nVerify equal channel count: ")
+        ch_to_drop_in_epo1 = list(set(epo1.ch_names).difference(epo2.ch_names))
+        ch_to_drop_in_epo2 = list(set(epo2.ch_names).difference(epo1.ch_names))
+        if len(ch_to_drop_in_epo1) != 0:
+            print('Dropping the following channel(s) in epo1: {}'.format(ch_to_drop_in_epo1))
+            basicAnalysis_tools.add_reject_ch_manifest(condition=condition, dyad=dyad, sub_fname=df_manifest[condition][dyad][0], reject=ch_to_drop_in_epo1, save_to=save_path)
+            epo1 = epo1.drop_channels(ch_to_drop_in_epo1)
+        elif len(ch_to_drop_in_epo2) != 0:
+            print('Dropping the following channel(s) in epo2: {}'.format(ch_to_drop_in_epo2))
+            basicAnalysis_tools.add_reject_ch_manifest(condition=condition, dyad=dyad, sub_fname=df_manifest[condition][dyad][1], reject=ch_to_drop_in_epo2, save_to=save_path)
+            epo2 = epo2.drop_channels(ch_to_drop_in_epo2)
+        else:
+            print('No channel to drop.')
 
         # Computing power spectrum ###################################################################
         psd1 = analyses.pow(epo1, fmin=7.5, fmax=11, n_fft=1000, n_per_seg=1000, epochs_average=True)
         psd2 = analyses.pow(epo2, fmin=7.5, fmax=11, n_fft=1000, n_per_seg=1000, epochs_average=True)
         data_psd = np.array([psd1.psd, psd2.psd])
-        np.save(save_path+psds_result+"dyad_"+dyad+"_condition_"+condition+"_psds.npy", data_psd, allow_pickle=False)
+        np.save(save_path+psds_result+"dyad_"+dyad+"_condition_"+condition+"_psds.npy", data_psd, allow_pickle=True)
 
         #  Initializing data and storage  #############################################################
-        data_inter = np.array([epo1, epo2])
+        data_inter = np.array([])
+        data_inter = np.array([epo1.get_data(), epo2.get_data()]) #, dtype=mne.io.eeglab.eeglab.EpochsEEGLAB) # Deprecation warning
         result_intra = []
 
         # Computing analytic signal per frequency band ################################################
@@ -95,7 +111,7 @@ for condition in df_manifest.keys():
 
         # Computing frequency- and time-frequency-domain connectivity ################################
         print("- - - - > Computing frequency- and time-frequency-domain connectivity ...")
-        result = analyses.compute_sync(complex_signal, mode=ibc_metric) # (n_freq, 2*n_channels, 2*n_channels)
+        result = analyses.compute_sync(complex_signal, mode=ibc_metric, epochs_average=True) # (n_freq, 2*n_channels, 2*n_channels)
         np.save(save_path+ibc_result+"dyad_"+dyad+"_condition_"+condition+"_IBC_"+ibc_metric+".npy", result, allow_pickle=False)
 
         ################# INTER #####################################################
@@ -129,64 +145,63 @@ for condition in df_manifest.keys():
             result_intra.append(C_intra)
         
         np.save(save_path+c_value+"dyad_"+dyad+"_condition_"+condition+"_intra_cohenD.npy", result_intra, allow_pickle=True)
-        
 
         #######################
         ##     if no ICA     ##   Un-comment the block bellow
         #######################
 
-        # ################# MVAR #####################################################
-        # # Computing frequency- and time-frequency-domain connectivity measures obtained by MVARICA approach, based on MVAR models' coefficients. For instance: PDC measure, with MVAR model of order 2, extended infomax ICA method and checking the MVAR model stability.
+        ################# MVAR #####################################################
+        # Computing frequency- and time-frequency-domain connectivity measures obtained by MVARICA approach, based on MVAR models' coefficients. For instance: PDC measure, with MVAR model of order 2, extended infomax ICA method and checking the MVAR model stability.
         
-        # mvar_result = analyses.compute_conn_mvar(complex_signal, 
-        #                                         mvar_params={"mvar_order": 2, "fitting_method":"default", "delta": 0},
-        #                                         ica_params={"method": "infomax_extended", "random_state": None},
-        #                                         measure_params={"name": "pdc", "n_fft": 512}
-        #                                         )
-        # # Output: (1, frequency,channels, channels, n_fft)
+        mvar_result = analyses.compute_conn_mvar(complex_signal, 
+                                                mvar_params={"mvar_order": 2, "fitting_method":"default", "delta": 0},
+                                                ica_params={"method": "infomax_extended", "random_state": None},
+                                                measure_params={"name": "pdc", "n_fft": 512}
+                                                )
+        # Output: (1, frequency,channels, channels, n_fft)
 
-        # no_ICA_result_intra = []
-        # no_ICA_result_inter = []
+        no_ICA_result_intra = []
+        no_ICA_result_inter = []
 
-        # # Slicing results to get the INTER-brain of the connectivity matrix and assigning the maximum value in the frequency spectrum (mvar-based connectivity measures are calculated over a frequency range assigned by n_fft variable, here n_fft = 512)
-        # for i in [0, 1]:
-        #     mvar_result = mvar_result.squeeze()
-        #     if i == 0 :
-        #         mvar_theta, mvar_alpha_low, mvar_alpha_high, mvar_beta, mvar_gamma =  mvar_result[:, n_ch:n_ch*2, 0:n_ch, :]
-        #     else:
-        #         mvar_theta, mvar_alpha_low, mvar_alpha_high, mvar_beta, mvar_gamma =  mvar_result[:, 0:n_ch, n_ch:n_ch*2, :]
-        #     # choosing Alpha_Low for futher analyses for example
-        #     auxiliary = np.zeros((n_ch, n_ch), dtype=mvar_result.dtype)
-        #     for j in range(0, n_ch):
-        #         for k in range(0, n_ch):
-        #             auxiliary[j, k] = np.amax(mvar_alpha_low[j,k])
-        #     mvar_values_inter = auxiliary
-        #     # computing Cohens'D for further analyses for example
-        #     mvar_C_inter = (mvar_values_inter -
-        #             np.mean(mvar_values_inter[:])) / np.std(mvar_values_inter[:])
-        #     # can also sample CSD values directly for statistical analyses
-        #     no_ICA_result_inter.append(mvar_C_inter)
+        # Slicing results to get the INTER-brain of the connectivity matrix and assigning the maximum value in the frequency spectrum (mvar-based connectivity measures are calculated over a frequency range assigned by n_fft variable, here n_fft = 512)
+        for i in [0, 1]:
+            mvar_result = mvar_result.squeeze()
+            if i == 0 :
+                mvar_theta, mvar_alpha_low, mvar_alpha_high, mvar_beta, mvar_gamma =  mvar_result[:, n_ch:n_ch*2, 0:n_ch, :]
+            else:
+                mvar_theta, mvar_alpha_low, mvar_alpha_high, mvar_beta, mvar_gamma =  mvar_result[:, 0:n_ch, n_ch:n_ch*2, :]
+            # choosing Alpha_Low for futher analyses for example
+            auxiliary = np.zeros((n_ch, n_ch), dtype=mvar_result.dtype)
+            for j in range(0, n_ch):
+                for k in range(0, n_ch):
+                    auxiliary[j, k] = np.amax(mvar_alpha_low[j,k])
+            mvar_values_inter = auxiliary
+            # computing Cohens'D for further analyses for example
+            mvar_C_inter = (mvar_values_inter -
+                    np.mean(mvar_values_inter[:])) / np.std(mvar_values_inter[:])
+            # can also sample CSD values directly for statistical analyses
+            no_ICA_result_inter.append(mvar_C_inter)
 
-        # # And now slicing for the INTRA-brain of the connectivity matrix ...
-        # for i in [0, 1]:
-        #     mvar_result = mvar_result.squeeze()
-        #     mvar_theta, mvar_alpha_low, mvar_alpha_high, mvar_beta, mvar_gamma =  mvar_result[:, i*n_ch:n_ch*(i+1), i*n_ch:n_ch*(i+1), :]
-        #     # choosing Alpha_Low for futher analyses for example
-        #     auxiliary = np.zeros((n_ch, n_ch), dtype=mvar_result.dtype)
-        #     for j in range(0, n_ch):
-        #         for k in range(0, n_ch):
-        #             auxiliary[j, k] = np.amax(mvar_alpha_low[j, k])
-        #     mvar_alpha_low = auxiliary
-        #     mvar_values_intra = mvar_alpha_low
-        #     mvar_values_intra -= np.diag(np.diag(mvar_values_intra))
-        #     # computing Cohens'D for further analyses for example
-        #     mvar_C_intra = (mvar_values_intra -
-        #             np.mean(mvar_values_intra[:])) / np.std(mvar_values_intra[:])
-        #     # can also sample CSD values directly for statistical analyses
-        #     no_ICA_result_intra.append(mvar_C_intra)
+        # And now slicing for the INTRA-brain of the connectivity matrix ...
+        for i in [0, 1]:
+            mvar_result = mvar_result.squeeze()
+            mvar_theta, mvar_alpha_low, mvar_alpha_high, mvar_beta, mvar_gamma =  mvar_result[:, i*n_ch:n_ch*(i+1), i*n_ch:n_ch*(i+1), :]
+            # choosing Alpha_Low for futher analyses for example
+            auxiliary = np.zeros((n_ch, n_ch), dtype=mvar_result.dtype)
+            for j in range(0, n_ch):
+                for k in range(0, n_ch):
+                    auxiliary[j, k] = np.amax(mvar_alpha_low[j, k])
+            mvar_alpha_low = auxiliary
+            mvar_values_intra = mvar_alpha_low
+            mvar_values_intra -= np.diag(np.diag(mvar_values_intra))
+            # computing Cohens'D for further analyses for example
+            mvar_C_intra = (mvar_values_intra -
+                    np.mean(mvar_values_intra[:])) / np.std(mvar_values_intra[:])
+            # can also sample CSD values directly for statistical analyses
+            no_ICA_result_intra.append(mvar_C_intra)
 
-        # STATISTICS ################################################################################
-        # <<<1>>> MNE test without any correction
+        # # STATISTICS ################################################################################
+        # # <<<1>>> MNE test without any correction
         # psd1_mean = np.mean(psd1.psd, axis=1)
         # psd2_mean = np.mean(psd2.psd, axis=1)
         # X = np.array([psd1_mean, psd2_mean])
