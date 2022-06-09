@@ -3,6 +3,7 @@
 # @author Franck Porteous <franck.porteous@proton.me>
 
 # Data science
+from importlib.util import spec_from_file_location
 import json
 import numpy as np
 import os
@@ -81,3 +82,46 @@ def add_reject_ch_manifest(condition:str, dyad:str, sub_fname, reject:list, save
     f.close()
 
     print(">> Reject of {} for {} (dyad {}) in condition {}".format(reject, sub_fname, dyad, condition))
+
+
+
+def create_full_ibc_dict(data_path:str, conditions:list, save_to:str, specific_file:str = None):
+    
+    if specific_file is not None:
+        result = np.load("{}{}".format(data_path, specific_file))
+        return result
+
+    ibc_manifest = dict()
+
+    for condi in conditions : 
+        ibc_manifest[condi]=dict() 
+
+    ibc_manifest[condi][ibc_metric] = np.zeros([36, 5, 44, 44], dtype=np.float32)
+    ibc_manifest[condi][ibc_metric].fill(0)
+
+    for d, file in enumerate(os.listdir(data_path)):
+        if file.endswith(".npy"):
+            #  Assuming the following file convention: dyad_{DYAD#}_condition_{CONDITION}_IBC_{ccorr, plv...}.npy
+            _, dyad, _, condi, _, ibc_metric = file.split('_')
+            ibc_metric = ibc_metric[:-4]
+            result = np.load(data_path+file)
+            ibc_manifest[condi][ibc_metric][d] = result
+    
+    if save_to is not None:
+
+        json_string = json.dumps(ibc_manifest, cls=NpEncoder)
+        f = open(save_to+"ibc_manifest.json","w")
+        f.write(json_string) 
+        f.close()
+
+    return ibc_manifest
+
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
