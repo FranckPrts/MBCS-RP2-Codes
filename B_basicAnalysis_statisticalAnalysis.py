@@ -12,6 +12,7 @@ import numpy as np
 import scipy
 # Import custom tools
 from utils import basicAnalysis_tools
+from utils.useful_variable import *
 
 mne.set_log_level('warning')
 # matplotlib.use('Qt5Agg')
@@ -21,23 +22,13 @@ mani_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/"
 data_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/results_ibc/"
 # save_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/plots"
 
-ch_to_keep= [
-    'Fp1', 'Fp2', 'F3', 'F4', 
-    'C3', 'C4', 
-    'P3', 'P4', 
-    'O1', 'O2', 
-    'F7', 'F8', 
-    'T7', 'T8', 
-    'P7', 'P8', 
-    'Fz', 'Cz', 'Pz', 
-    'AFz', 'CPz', 'POz']
-
 f=open(mani_path+"df_manifest.json")
 df_manifest = json.load(f)
 f.close()
 
 conditions = list(df_manifest.keys())
 dyads     = list(set(df_manifest[conditions[1]]).intersection(df_manifest[conditions[0]]))
+ibc_metrics = ['envelope_corr', 'pow_corr', 'plv', 'ccorr', 'coh', 'imaginary_coh']
 
 #%% Loading data 
 
@@ -58,13 +49,16 @@ tmp = {
 
 #%% 
 
-ibc_df = basicAnalysis_tools.create_full_ibc_dict(
-    data_path=data_path, 
-    conditions = conditions,
+ibc_df = basicAnalysis_tools.create_ibc_manifest(
+    data_path    = data_path, 
+    mani_path    = mani_path, # DOES'T WORK (yet) bc np.arr are multi-dim
+    conditions   = conditions,
+    ibc_metrics  = ['ccorr'],
+    n_ch         = n_ch,
+    nb_freq_band = len(freq_bands.keys()), 
     # specific_file ='dyad_16_condition_ES_IBC_ccorr.npy',
-    save_to= "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/" # DOES'T WORK bc np.arr are multi-dim
+    save         = True
     )
-
 #%% 
 theta, alpha_low, alpha_high, beta, gamma = ibc_df[:, 0:n_ch, n_ch:2*n_ch]
 

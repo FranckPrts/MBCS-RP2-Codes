@@ -3,6 +3,7 @@
 # @author Franck Porteous <franck.porteous@proton.me>
 
 # Data science
+import glob
 from importlib.util import spec_from_file_location
 import json
 import numpy as np
@@ -10,6 +11,8 @@ import os
 import pandas as pd
 from scipy.io import loadmat
 
+reject_ch_manifest = dict()
+reject_ch_manifest["total_reject_count"] = 0
 
 def get_analysis_manifest(data_path:str, condition:list, save_to:str = None):
 
@@ -65,10 +68,9 @@ def get_analysis_manifest(data_path:str, condition:list, save_to:str = None):
 
     return analysis_manifest
 
-reject_ch_manifest = dict()
-
 def add_reject_ch_manifest(condition:str, dyad:str, sub_fname, reject:list, save_to:str = None):
-    
+    reject_ch_manifest["total_reject_count"] += 1 
+
     if condition not in reject_ch_manifest.keys():
         reject_ch_manifest[condition] = dict()
     if dyad not in reject_ch_manifest[condition].keys():
@@ -76,41 +78,57 @@ def add_reject_ch_manifest(condition:str, dyad:str, sub_fname, reject:list, save
     
     reject_ch_manifest[condition][dyad] = (sub_fname, reject)
 
-    json_string = json.dumps(reject_ch_manifest)
+    json_string = json.dumps(reject_ch_manifest) 
     f = open(save_to+"reject_ch_manifest.json","w")
     f.write(json_string)
     f.close()
 
     print(">> Reject of {} for {} (dyad {}) in condition {}".format(reject, sub_fname, dyad, condition))
 
-
-
-def create_full_ibc_dict(data_path:str, conditions:list, save_to:str, specific_file:str = None):
+def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metrics:list, n_ch:int, nb_freq_band:int, save:bool = True, specific_file:str = None):
     
+    # If the user just want to load a file. Caution! the output is then different.
     if specific_file is not None:
         result = np.load("{}{}".format(data_path, specific_file))
         return result
 
+    f = open(mani_path+"reject_ch_manifest.json","r")
+    reject_ch_manifest = json.load(f) 
+    f.close()
+
     ibc_manifest = dict()
+    
+    file_nb        = len(glob.glob(data_path+"*.npy"))
+    dyad_per_condi = int(file_nb//len(conditions))
+    dyad_per_condi -= reject_ch_manifest["total_reject_count"]//2
 
     for condi in conditions : 
         ibc_manifest[condi]=dict() 
+        for metric in ibc_metrics:
+            ibc_manifest[condi][metric] = np.zeros([dyad_per_condi, nb_freq_band, n_ch*2, n_ch*2], dtype=np.float32)
 
-    ibc_manifest[condi][ibc_metric] = np.zeros([36, 5, 44, 44], dtype=np.float32)
-    ibc_manifest[condi][ibc_metric].fill(0)
+    cnt_es = 0
+    cnt_ns = 0
 
-    for d, file in enumerate(os.listdir(data_path)):
-        if file.endswith(".npy"):
-            #  Assuming the following file convention: dyad_{DYAD#}_condition_{CONDITION}_IBC_{ccorr, plv...}.npy
-            _, dyad, _, condi, _, ibc_metric = file.split('_')
-            ibc_metric = ibc_metric[:-4]
-            result = np.load(data_path+file)
-            ibc_manifest[condi][ibc_metric][d] = result
-    
-    if save_to is not None:
+    for file in glob.glob(data_path+"*.npy"):
+        #  Assuming the following file convention: dyad_{DYAD#}_condition_{CONDITION}_IBC_{ccorr, plv...}.npy
+        _, dyad, _, condi, _, ibc_metric = file.split("/")[-1].split('_')
+        ibc_metric = ibc_metric[:-4]
+        result = np.load(file)
 
+        if result.shape != (nb_freq_band, n_ch*2, n_ch*2):
+            print("Not dealing with dyad #{} / condition because its 'result' has shape {} instead of {}".format(dyad, result.shape, (nb_freq_band, n_ch*2, n_ch*2)))
+            pass
+        else:
+            if condi == 'ES':
+                ibc_manifest[condi][ibc_metric][cnt_es] = result
+                cnt_es += 1
+            if condi == 'NS':
+                ibc_manifest[condi][ibc_metric][cnt_ns] = result
+                cnt_ns += 1
+    if save:
         json_string = json.dumps(ibc_manifest, cls=NpEncoder)
-        f = open(save_to+"ibc_manifest.json","w")
+        f = open(mani_path+"ibc_manifest.json","w")
         f.write(json_string) 
         f.close()
 
