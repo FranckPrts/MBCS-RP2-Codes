@@ -11,8 +11,8 @@ ch_to_keep= [
     'Fz', 'Cz', 'Pz', 
     'AFz', 'CPz', 'POz']
 
-freq_bands = {'Theta': [4, 7],
-              'Alpha-Low': [7.5, 11],
-              'Alpha-High': [11.5, 13],
+freq_bands = {'Theta': [4.0, 7.0],
+              'Alpha-Low': [7.5, 11.0],
+              'Alpha-High': [11.5, 13.0],
               'Beta': [13.5, 29.5],
-              'Gamma': [30, 48]}
+              'Gamma': [30.0, 48.0]}
