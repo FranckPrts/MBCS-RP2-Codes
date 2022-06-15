@@ -16,3 +16,10 @@ freq_bands = {'Theta': [4.0, 7.0],
               'Alpha-High': [11.5, 13.0],
               'Beta': [13.5, 29.5],
               'Gamma': [30.0, 48.0]} 
+
+fqb2idx =  {'Theta': 0,
+              'Alpha-Low': 1,
+              'Alpha-High': 2,
+              'Beta': 3,
+              'Gamma': 4
+              }

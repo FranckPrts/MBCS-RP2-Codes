@@ -62,12 +62,12 @@ freq_bands = OrderedDict(freq_bands)
 df_manifest = basicAnalysis_tools.get_analysis_manifest(data_path, expConditionDir, save_to=save_path)
 
 #%% 
-for condition in df_manifest.keys(): 
-# for condition in ['SNS_ES_cleaned']:
+# for condition in df_manifest.keys(): 
+for condition in ['ES']:
     print("- - > Doing condition {} ...".format(condition))
 
-    for dyad in df_manifest[condition].keys():
-    # for dyad in ['36']:
+    # for dyad in df_manifest[condition].keys():
+    for dyad in ['4']:
         print("- - - > Doing dyad {} ...".format(dyad))
 
         # Load participant's EEG #####################################################################
@@ -96,7 +96,7 @@ for condition in df_manifest.keys():
         psd1 = analyses.pow(epo1, fmin=7.5, fmax=11, n_fft=1000, n_per_seg=1000, epochs_average=True)
         psd2 = analyses.pow(epo2, fmin=7.5, fmax=11, n_fft=1000, n_per_seg=1000, epochs_average=True)
         data_psd = np.array([psd1.psd, psd2.psd])
-        np.save(save_path+psds_result+"dyad_"+dyad+"_condition_"+condition+"_psds.npy", data_psd, allow_pickle=True)
+        np.save("{}{}dyad_{}_condition_{}_psds.npy".format(save_path, psds_result, dyad, condition), data_psd, allow_pickle=True)
 
         #  Initializing data and storage  #############################################################
         data_inter = np.array([])

@@ -28,9 +28,13 @@ f=open(mani_path+"df_manifest.json")
 df_manifest = json.load(f)
 f.close()
 
-conditions = list(df_manifest.keys())
-dyads     = list(set(df_manifest[conditions[1]]).intersection(df_manifest[conditions[0]]))
 ibc_metrics = ['envelope_corr', 'pow_corr', 'plv', 'ccorr', 'coh', 'imaginary_coh']
+conditions  = list(df_manifest.keys())
+dyads       = list(set(df_manifest[conditions[1]]).intersection(df_manifest[conditions[0]]))
+bands       = freq_bands.keys()
+
+#  TODO make a func that deletes the dyad that have to be rejected
+dyads.remove('36') # removing dyad 
 
 #%% Loading data 
 epo1 = mne.io.read_epochs_eeglab(eeg_sampl).pick_channels(ch_to_keep, ordered=False)
@@ -38,7 +42,7 @@ n_ch = len(epo1.info['ch_names'])
 
 #%% 
 #  Output is shape (freq_banddyads, sensor(x2), sensor(x2))
-ibc_df = basicAnalysis_tools.create_ibc_manifest(
+ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
     data_path    = ibc_data_path, 
     mani_path    = mani_path, # DOES'T WORK (yet) bc np.arr are multi-dim
     conditions   = conditions,
@@ -49,42 +53,68 @@ ibc_df = basicAnalysis_tools.create_ibc_manifest(
     save         = True
     )
 
-#  Here we unpack the dataframe for each frequency band and slice for the INTER part of the matrice:
-theta, alpha_low, alpha_high, beta, gamma = ibc_df["ES"]["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch]
+#%%
+
+for band in bands:
+    for condi in conditions :
+        #  Slice the INTER part of the matrice for the frequency band of choice
+        conVal = ibc_df[condi]["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch]
+
+        # Compute mean over all sensor and all frequency bands
+        print(condi, band, conVal.mean())
+
+
+
+#%% 
+# theta, alpha_low, alpha_high, beta, gamma = ibc_df["ES"]["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch]
 
 # We're now looking into 
 # values = alpha_low
 
-
 # print("- - - - > Computing Cohens'D ... ")
 # C = (values - np.mean(values[:])) / np.std(values[:])
-
 # viz.viz_2D_topomap_inter(epo1, epo1, C, threshold='auto', steps=10, lab=True)
 
 #%% 
 # define the frequency band of interest 
 fr_b = "Alpha-Low"
 
-for dyad in dyads:
-    for condi in conditions:
-        
+# Create the freq_list varialbe (e.g., for Alpha-Low [7.5, 11.0]: [7.5, 8, 8.5, ..., 11.])
+freq_list = np.linspace(
+    start=float(freq_bands[fr_b][0]), 
+    stop=float(freq_bands[fr_b][1]), 
+    endpoint=True,
+    num=int((freq_bands[fr_b][1]-freq_bands[fr_b][0])/0.5+1))
+
+con_matrixTuple = stats.con_matrix(epo1, freqs_mean=freq_list)
+ch_con_freq = con_matrixTuple.ch_con_freq
+
+#%%
+data_group = [np.zeros([len(dyads)*2, n_ch, len(freq_list)], dtype=np.float32), 
+              np.zeros([len(dyads)*2, n_ch, len(freq_list)], dtype=np.float32)]
+
+for condi in conditions:
+    counter = 0
+    for dyad in dyads:
         # load the psd data
-        psd1, psd2 = np.load("{}dyad_{}_condition_{}_psds.npy".format(psd_data_path, 2, 'ES'))
+        psd1, psd2 = np.load("{}dyad_{}_condition_{}_psds.npy".format(psd_data_path, dyad, condi))
         
-        # Create the freq_list varialbe (e.g., for Alpha-Low [7.5, 11.0]: [7.5, 8, 8.5, ..., 11.])
-        freq_list = np.linspace(
-            start=float(freq_bands[fr_b][0]), 
-            stop=float(freq_bands[fr_b][1]), 
-            endpoint=True,
-            num=int((freq_bands[fr_b][1]-freq_bands[fr_b][0])/0.5+1))
         # To recreate the named tuple hypyp.analysis.pow() initialy makes
         # psd_tuple = namedtuple('PSD', ['freq_list', 'psd'])
         # psd1 = psd_tuple(freq_list=freq_list, psd=psd)
 
-        data_group = [np.array([psd1, psd1]), np.array([psd2, psd2])]
+        print("Dyad #{}".format(dyad))
+        if condi == 'ES':
+            data_group[0][counter] = psd1
+            data_group[0][counter+1] = psd2
+        elif condi == 'NS':
+            data_group[1][counter] = psd1
+            data_group[1][counter+1] = psd2
+        else:
+            print("something went wrong with the condition: ", condi, dyad)
+        # print(condi, '–––', dyad, '–––', psd1.mean(), psd2.mean())
+        counter+=2
 
-con_matrixTuple = stats.con_matrix(epo1, freqs_mean=freq_list)
-ch_con_freq = con_matrixTuple.ch_con_freq
 
 #%% 
 statscondCluster = stats.statscondCluster(data=data_group,
@@ -96,7 +126,7 @@ statscondCluster = stats.statscondCluster(data=data_group,
 
 F_obs, clusters, cluster_pv, H0, F_obs_plot = statscondCluster
 
-
+#%% 
 analyses.indices_connectivity_interbrain()
 
 #%% 

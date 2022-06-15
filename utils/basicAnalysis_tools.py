@@ -109,6 +109,7 @@ def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metri
 
     cnt_es = 0
     cnt_ns = 0
+    reject = []
 
     for file in glob.glob(data_path+"*.npy"):
         #  Assuming the following file convention: dyad_{DYAD#}_condition_{CONDITION}_IBC_{ccorr, plv...}.npy
@@ -118,6 +119,7 @@ def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metri
 
         if result.shape != (nb_freq_band, n_ch*2, n_ch*2):
             print("Not dealing with dyad #{} (cond: {}) because its 'result' has shape {} instead of {}".format(dyad, condi, result.shape, (nb_freq_band, n_ch*2, n_ch*2)))
+            reject.append([dyad, condi])
             pass
         else:
             if condi == 'ES':
@@ -138,7 +140,7 @@ def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metri
         f.write(json_string) 
         f.close()
 
-    return ibc_manifest
+    return ibc_manifest, reject
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
