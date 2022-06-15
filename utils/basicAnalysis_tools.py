@@ -117,7 +117,7 @@ def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metri
         result = np.load(file)
 
         if result.shape != (nb_freq_band, n_ch*2, n_ch*2):
-            print("Not dealing with dyad #{} / condition because its 'result' has shape {} instead of {}".format(dyad, result.shape, (nb_freq_band, n_ch*2, n_ch*2)))
+            print("Not dealing with dyad #{} (cond: {}) because its 'result' has shape {} instead of {}".format(dyad, condi, result.shape, (nb_freq_band, n_ch*2, n_ch*2)))
             pass
         else:
             if condi == 'ES':
@@ -126,6 +126,12 @@ def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metri
             if condi == 'NS':
                 ibc_manifest[condi][ibc_metric][cnt_ns] = result
                 cnt_ns += 1
+    
+    # Reshaping the data so it can be unpacked in its freq dimension easily
+    for condi in conditions:
+        for ibc in ibc_metrics:
+            ibc_manifest[condi][ibc] = np.moveaxis(ibc_manifest[condi][ibc], 1, 0)
+    
     if save:
         json_string = json.dumps(ibc_manifest, cls=NpEncoder)
         f = open(mani_path+"ibc_manifest.json","w")

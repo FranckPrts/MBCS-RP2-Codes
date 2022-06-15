@@ -12,4 +12,5 @@ This folder is structured as such:<br>
     ├── basicAnalysis_tools.py<br>
     ├── eeg_sw.py<br>
     ├── find_dropped_epochs.py<br>
-    └── speech_sw.py<br>
+    ├── speech_sw.py<br>
+    └── useful_variable.py<br>
