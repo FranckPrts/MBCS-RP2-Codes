@@ -7,10 +7,13 @@ from hypyp import stats
 from hypyp import viz
 from hypyp import analyses
 import json
-import matplotlib
+import matplotlib.pyplot as plt
 import mne
 import numpy as np
+import pandas as pd
+import seaborn as sns
 import scipy
+
 # Import custom tools
 from utils import basicAnalysis_tools
 from utils.useful_variable import *
@@ -54,14 +57,44 @@ ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
     )
 
 #%%
-
+# Prints per condition x frequency band the averaged 
 for band in bands:
     for condi in conditions :
         #  Slice the INTER part of the matrice for the frequency band of choice
         conVal = ibc_df[condi]["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch]
-
-        # Compute mean over all sensor and all frequency bands
+        # Compute mean over all sensor
         print(condi, band, conVal.mean())
+
+#%% Compute mean connectivity measure on all sensors while keeping freqband and sub dimension
+conVal_freqSub = ibc_df['ES']["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch].mean(axis=(2, 3))
+g = sns.displot(conVal_freqSub.transpose(), kind="kde", legend = False)
+plt.title(label='Average connectiviy over all sensors', loc='left') 
+plt.legend(title='Frequency bands', loc='upper right', labels=list(freq_bands_ord.keys())[::-1])
+plt.show(g)
+
+
+stats.ttest_1samp()
+
+
+
+#%%  Look into the distribution of 
+band = 'Alpha-Low'
+conVal_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
+sns.displot(conVal_ES, kind="kde")
+
+#%% 
+
+for band in bands:
+    #  Slice the INTER part of the matrice for the frequency band of choice
+    conVal_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch]
+    
+    print(band, conVal_ES.mean(axis=(1, 2)).shape)
+
+    #  Slice the INTER part of the matrice for the frequency band of choice
+    conVal_NS = ibc_df['NS']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch]
+    
+    print(band, conVal_NS.mean(axis=(1, 2)).shape)
+
 
 
 
