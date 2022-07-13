@@ -13,24 +13,11 @@ ch_to_keep= [
     'Fz', 'Cz', 'Pz', 
     'AFz', 'CPz', 'POz']
 
-ch_frontal = [
-    'Fp1', 'Fp2', 
-    'F3', 'F4', 
-    'F7', 'F8', 
-    'Fz', 'AFz']
-
-ch_temporal = ['T7', 'T8']
-
-ch_occipital = ['O1', 'O2', 'POz']
-
-ch_parietal = [
-    'C3', 'C4', 
-    'P3', 'P4', 
-    'P7', 'P8', 
-    'Cz', 'Pz', 
-    'CPz']
-
-assert len(ch_to_keep) == len(ch_frontal) + len(ch_parietal) + len(ch_occipital) + len(ch_temporal), 'The lengths of the channel list/sub-list does not match up.'
+ROIs = {'Frontal':   ['Fp1', 'Fp2', 'F3', 'F4', 'F7', 'F8', 'Fz', 'AFz'],
+        'Temporal':  ['T7', 'T8'],
+        'Occipital': ['O1', 'O2', 'POz'],
+        'Parietal':  ['C3', 'C4', 'P3', 'P4', 'P7', 'P8', 'Cz', 'Pz', 'CPz']
+        }
 
 freq_bands = {'Theta': [4.0, 7.0],
               'Alpha-Low': [7.5, 11.0],
@@ -46,3 +33,8 @@ fqb2idx =  {'Theta': 0,
               'Beta': 3,
               'Gamma': 4
               }
+
+
+ch2idx = {}
+for idx, ch in enumerate(ch_to_keep):
+    ch2idx[ch]=idx
