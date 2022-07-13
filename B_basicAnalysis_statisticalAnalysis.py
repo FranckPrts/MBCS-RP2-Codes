@@ -21,12 +21,13 @@ from utils.useful_variable import *
 mne.set_log_level('warning')
 # matplotlib.use('Qt5Agg')
 
-eeg_sampl     = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/samples/sample_epochs.set"
-mani_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/"
-fig_save_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/plots/"
-ibc_data_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/results_ibc/"
-psd_data_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/results_psds/"
-# save_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/plots"
+eeg_sampl       = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/samples/sample_epochs.set"
+mani_path       = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/"
+fig_save_path   = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/plots/"
+ibc_data_path   = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/results_ibc/"
+psd_data_path   = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/results_psds/"
+
+save_format = 'pdf'
 
 f=open(mani_path+"df_manifest.json")
 df_manifest = json.load(f)
@@ -37,14 +38,15 @@ conditions  = list(df_manifest.keys())
 dyads       = list(set(df_manifest[conditions[1]]).intersection(df_manifest[conditions[0]]))
 bands       = freq_bands.keys()
 
-#  TODO make a func that deletes the dyad that have to be rejected
-dyads.remove('36') # removing dyad 
+# Removing rejected dyad(s) 
+dyads.remove('36') 
 
-#%% Loading data 
+#%% Loading an epoch file to get useful metadata 
 epo1 = mne.io.read_epochs_eeglab(eeg_sampl).pick_channels(ch_to_keep, ordered=False)
 n_ch = len(epo1.info['ch_names'])
 
 #%% 
+# #### Create the IBC manifest ####
 #  Output is shape (freq_banddyads, sensor(x2), sensor(x2))
 ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
     data_path    = ibc_data_path, 
@@ -57,8 +59,12 @@ ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
     save         = True
     )
 
-#%%
-# Prints qverqge IBC measure per condition x frequency band
+
+#           ###########    plots    ###########
+
+
+#%% 
+# #### Prints average IBC measure per condition x frequency band ####
 for band in bands:
     for condi in conditions :
         #  Slice the INTER part of the matrice for the frequency band of choice
@@ -66,21 +72,27 @@ for band in bands:
         # Compute mean over all sensor
         print(condi, band, conVal.mean())
 
-#%%  Look into the IBC value distribution across ONE freauency band
-band = 'Alpha-Low'
-conVal_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
-g = sns.displot(conVal_ES, kind="kde")
-plt.title(label='Distribution of IBC vqlues in {}'.format(band), loc='left') 
-# plt.savefig('{}{}.png'.format(fig_save_path, 'fig1'))
-plt.show(g)
-#%% Compute mean connectivity measure on all sensors while keeping freqband and sub dimension
+#%% ####  Look into the IBC value distribution across all frequency band #### 
+for band in bands:
+    conVal_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
+    g = sns.displot(conVal_ES, kind="kde")
+    g.fig.subplots_adjust(top=.95)
+    g.ax.set_title('IBC value distribution in {} (all sensors)'.format(band), loc='left')
+    plt.savefig('{}IBC_distrib/IBC_distrib_{}_all_chans.{}'.format(fig_save_path, band, save_format))
+
+#%% #### Compute mean connectivity measure on all sensors while keeping freqband and sub dimension #### 
 conVal_freqSub = ibc_df['ES']["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch].mean(axis=(2, 3))
 g = sns.displot(conVal_freqSub.transpose(), kind="kde", legend = False)
-plt.title(label='Average connectiviy over all sensors', loc='left') 
+g.fig.subplots_adjust(top=.95)
+g.ax.set_title(label='IBC value distribution for all frequency band (all sensors)', loc='left') 
 plt.legend(title='Frequency bands', loc='upper right', labels=list(freq_bands_ord.keys())[::-1])
-plt.show(g)
+plt.savefig('{}IBC_distrib/IBC_distrib_allFreqband_allChans.{}'.format(fig_save_path, save_format))
 
-#%%
+
+#           ###########    stats    ###########
+
+
+#%% #### T-Testing IBC between freq band #### 
 for band in bands:
     conVal_freqSub_NS = ibc_df['NS']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
     conVal_freqSub_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
@@ -93,8 +105,35 @@ for band in bands:
     print(scipy.stats.shapiro(conVal_freqSub_ES))
 
     # Conduct Paired Sample T-Test on IBC 
-    print(scipy.stats.ttest_rel(conVal_freqSub_NS, conVal_freqSub_ES))
+    tstatistic, pvalue= scipy.stats.ttest_rel(conVal_freqSub_NS, conVal_freqSub_ES)
+    print('\tT-Test Pvalue = {}'.format(pvalue))
+    if pvalue < 0.05:
+        print("\tSignificant difference across condition")
+    else:
+        print("\tnon-significant")
 
+
+#%% TESTING
+sample_size = ibc_df[condi]["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2)).shape[0]
+
+meanIBC_condiFreq_long = np.empty((sample_size*len(bands)*len(dyads),3))
+
+cnt=0
+for condi in conditions:
+    for band in bands:
+        condi_lab = np.full((sample_size), condi)
+        frequ_lab = np.full((sample_size), band)
+
+        meanIBC_condiFreq_long[cnt] = ibc_df[condi]["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
+        cnt+=sample_size
+
+print(out)
+
+tmmp = pd.DataFrame(meanIBC_condiFreq_long)
+tmmp.columns = ['Condition', 'Frequencies_bands', 'IBC']
+sns.boxplot(x="Frequencies_bands", y="IBC",
+            hue="Condition", palette=["m", "g"],
+            data=tmmp)
 
 #%% 
 # theta, alpha_low, alpha_high, beta, gamma = ibc_df["ES"]["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch]
