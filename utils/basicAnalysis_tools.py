@@ -133,7 +133,7 @@ def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metri
     for condi in conditions:
         for ibc in ibc_metrics:
             ibc_manifest[condi][ibc] = np.moveaxis(ibc_manifest[condi][ibc], 1, 0)
-    
+
     if save:
         json_string = json.dumps(ibc_manifest, cls=NpEncoder)
         f = open(mani_path+"ibc_manifest.json","w")
@@ -151,3 +151,28 @@ class NpEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
+
+def get_ch_idx(roi:str(), n_ch:int(), quadrant:str()):
+
+    from .useful_variable import ROIs, ch2idx
+
+    assert quadrant in ['inter', 'intra_A', 'intra_B'], "Quadrand is wrong"
+    assert roi in ['Frontal', 'Temporal', 'Occipital', 'Parietal'], "Roi is not defined"
+    
+    cut1 = []
+    for ch in ROIs[roi]:
+        cut1.append(ch2idx[ch])
+    cut2 = cut1
+
+    if quadrant == 'inter':
+        cut2 = [x+n_ch for x in cut2]
+    elif quadrant == 'intra_A':
+        pass # The idx already indicate these locs
+    elif quadrant == 'intra_B':
+        cut1 = [x+n_ch for x in cut1]
+        cut2 = [x+n_ch for x in cut2]
+    
+    cut = np.ix_(cut1, cut2)
+
+    return cut
+
