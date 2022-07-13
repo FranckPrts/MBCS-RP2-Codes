@@ -37,6 +37,7 @@ ibc_metrics = ['envelope_corr', 'pow_corr', 'plv', 'ccorr', 'coh', 'imaginary_co
 conditions  = list(df_manifest.keys())
 dyads       = list(set(df_manifest[conditions[1]]).intersection(df_manifest[conditions[0]]))
 bands       = freq_bands.keys()
+# ROIs        = 
 
 # Removing rejected dyad(s) 
 dyads.remove('36') 
@@ -64,15 +65,40 @@ ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
 
 
 #%% 
-# #### Prints average IBC measure per condition x frequency band ####
+# ############ 1.1
+# Prints average IBC measure per condition x frequency band
+# ############
+
 for band in bands:
     for condi in conditions :
-        #  Slice the INTER part of the matrice for the frequency band of choice
+        #  Slice the INTER part of the matrice for each frequency band
         conVal = ibc_df[condi]["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch]
         # Compute mean over all sensor
         print(condi, band, conVal.mean())
 
-#%% ####  Look into the IBC value distribution across all frequency band #### 
+#%% 
+# ############ 1.2
+# Prints average IBC measure per condition x frequency band x ROIs
+# ############
+
+for band in bands: 
+    for condi in conditions :
+        for roi in ROIs.keys():            
+
+            cut = basicAnalysis_tools.get_ch_idx(roi=roi, n_ch=n_ch, quadrant='inter')
+            
+            conVal = ibc_df[condi]["ccorr"][fqb2idx[band]][:, cut[0], cut[1]]
+            # conVal = ibc_df[condi]["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch] # archive
+            
+            # Compute mean over selected sensors
+            print(condi, band, roi, conVal.mean())
+            print("SHAPE", conVal.shape)
+
+#%%
+# ############ 1.3
+# Look into the IBC value distribution across all frequency band
+# ############
+
 for band in bands:
     conVal_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
     g = sns.displot(conVal_ES, kind="kde")
@@ -80,7 +106,10 @@ for band in bands:
     g.ax.set_title('IBC value distribution in {} (all sensors)'.format(band), loc='left')
     plt.savefig('{}IBC_distrib/IBC_distrib_{}_all_chans.{}'.format(fig_save_path, band, save_format))
 
-#%% #### Compute mean connectivity measure on all sensors while keeping freqband and sub dimension #### 
+#%% 
+# ############ 1.4
+# Compute mean connectivity measure on all sensors while keeping freqband and sub dimension
+# ############
 conVal_freqSub = ibc_df['ES']["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch].mean(axis=(2, 3))
 g = sns.displot(conVal_freqSub.transpose(), kind="kde", legend = False)
 g.fig.subplots_adjust(top=.95)
@@ -127,8 +156,7 @@ for condi in conditions:
         meanIBC_condiFreq_long[cnt] = ibc_df[condi]["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
         cnt+=sample_size
 
-print(out)
-
+#%%
 tmmp = pd.DataFrame(meanIBC_condiFreq_long)
 tmmp.columns = ['Condition', 'Frequencies_bands', 'IBC']
 sns.boxplot(x="Frequencies_bands", y="IBC",
