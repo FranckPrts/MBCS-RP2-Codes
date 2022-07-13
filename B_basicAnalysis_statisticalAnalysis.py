@@ -3,6 +3,7 @@
 # @author Franck Porteous <franck.porteous@proton.me>
 
 #%% 
+from cgi import print_arguments
 from hypyp import stats
 from hypyp import viz
 from hypyp import analyses
@@ -61,7 +62,7 @@ ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
     )
 
 
-#           ###########    plots    ###########
+#           ###########   1. plots    ###########
 
 
 #%% 
@@ -83,7 +84,7 @@ for band in bands:
 
 for band in bands: 
     for condi in conditions :
-        for roi in ROIs.keys():            
+        for roi in ROIs.keys():
 
             cut = basicAnalysis_tools.get_ch_idx(roi=roi, n_ch=n_ch, quadrant='inter')
             
@@ -118,10 +119,13 @@ plt.legend(title='Frequency bands', loc='upper right', labels=list(freq_bands_or
 plt.savefig('{}IBC_distrib/IBC_distrib_allFreqband_allChans.{}'.format(fig_save_path, save_format))
 
 
-#           ###########    stats    ###########
+#           ###########   2. stats    ###########
 
 
-#%% #### T-Testing IBC between freq band #### 
+#%% 
+# ############ 2.1 
+# T-Testing IBC between freq band
+# ############ 
 for band in bands:
     conVal_freqSub_NS = ibc_df['NS']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
     conVal_freqSub_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
@@ -140,6 +144,34 @@ for band in bands:
         print("\tSignificant difference across condition")
     else:
         print("\tnon-significant")
+#%% 
+# ############ 2.2 
+# T-Testing IBC between freq band x ROIs
+# ############ 
+
+for band in bands:
+    for roi in ROIs.keys():
+
+        cut = basicAnalysis_tools.get_ch_idx(roi=roi, n_ch=n_ch, quadrant='inter')
+
+        conVal_freqSub_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, cut[0], cut[1]].mean(axis=(1, 2))
+        conVal_freqSub_NS = ibc_df['NS']["ccorr"][fqb2idx[band]][:, cut[0], cut[1]].mean(axis=(1, 2))
+
+        print("\n{}".format(band))# Print band then average value
+        print("-- {}".format(roi))# Print band then average value
+        print("Mean IBC in NS: {}".format(ibc_df['NS']["ccorr"][fqb2idx[band]][:, cut[0], cut[1]].mean())) 
+        print("Mean IBC in ES: {}".format(ibc_df['ES']["ccorr"][fqb2idx[band]][:, cut[0], cut[1]].mean())) 
+        
+        print(scipy.stats.shapiro(conVal_freqSub_NS))
+        print(scipy.stats.shapiro(conVal_freqSub_ES))
+
+        # Conduct Paired Sample T-Test on IBC 
+        tstatistic, pvalue= scipy.stats.ttest_rel(conVal_freqSub_NS, conVal_freqSub_ES)
+        print('\tT-Test Pvalue = {}'.format(pvalue))
+        if pvalue < 0.05:
+            print("\tSignificant difference across condition")
+        else:
+            print("\tnon-significant")
 
 
 #%% TESTING
