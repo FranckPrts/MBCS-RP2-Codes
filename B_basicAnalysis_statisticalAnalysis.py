@@ -95,9 +95,11 @@ for band in bands:
             print(condi, band, roi, conVal.mean())
             print("SHAPE", conVal.shape)
 
+
+
 #%%
 # ############ 1.3
-# Look into the IBC value distribution across all frequency band
+# IBC distribution across frequency band
 # ############
 
 for band in bands:
@@ -105,11 +107,27 @@ for band in bands:
     g = sns.displot(conVal_ES, kind="kde")
     g.fig.subplots_adjust(top=.95)
     g.ax.set_title('IBC value distribution in {} (all sensors)'.format(band), loc='left')
-    plt.savefig('{}IBC_distrib/IBC_distrib_{}_all_chans.{}'.format(fig_save_path, band, save_format))
+    plt.savefig('{}IBC_distrib/all_ch/IBC_distrib_{}_all_chans.{}'.format(fig_save_path, band, save_format))
+
+#%%
+# ############ 1.4
+# IBC distribution across frequency band x ROIs
+# ############
+
+for band in bands:
+    for roi in ROIs.keys():
+        cut = basicAnalysis_tools.get_ch_idx(roi=roi, n_ch=n_ch, quadrant='inter')
+        conVal_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:,  cut[0], cut[1]].mean(axis=(1, 2))
+        g = sns.displot(conVal_ES, kind="kde")
+        g.fig.subplots_adjust(top=.95)
+        g.ax.set_title('IBC value distribution in {} ({})'.format(band, roi), loc='left')
+        plt.savefig('{}IBC_distrib/per_band/per_roi/IBC_distrib_{}_{}_ch.{}'.format(fig_save_path, band, roi, save_format))
+
+
 
 #%% 
-# ############ 1.4
-# Compute mean connectivity measure on all sensors while keeping freqband and sub dimension
+# ############ 1.5
+# Average IBC per frequency band, all sensors
 # ############
 conVal_freqSub = ibc_df['ES']["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch].mean(axis=(2, 3))
 g = sns.displot(conVal_freqSub.transpose(), kind="kde", legend = False)
@@ -136,6 +154,8 @@ for band in bands:
     
     print(scipy.stats.shapiro(conVal_freqSub_NS))
     print(scipy.stats.shapiro(conVal_freqSub_ES))
+
+    print('normaltest teststat = %6.3f pvalue = %6.4f' % stats.normaltest(x))
 
     # Conduct Paired Sample T-Test on IBC 
     tstatistic, pvalue= scipy.stats.ttest_rel(conVal_freqSub_NS, conVal_freqSub_ES)
