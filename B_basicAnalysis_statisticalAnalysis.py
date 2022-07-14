@@ -124,7 +124,6 @@ for band in bands:
         plt.savefig('{}IBC_distrib/per_band/per_roi/IBC_distrib_{}_{}_ch.{}'.format(fig_save_path, band, roi, save_format))
 
 
-
 #%% 
 # ############ 1.5
 # Average IBC per frequency band, all sensors
@@ -135,6 +134,34 @@ g.fig.subplots_adjust(top=.95)
 g.ax.set_title(label='IBC value distribution for all frequency band (all sensors)', loc='left') 
 plt.legend(title='Frequency bands', loc='upper right', labels=list(freq_bands_ord.keys())[::-1])
 plt.savefig('{}IBC_distrib/IBC_distrib_allFreqband_allChans.{}'.format(fig_save_path, save_format))
+#%% 
+# ############ 1.5 TRYOUT FOR FACET GRID
+# Average IBC per frequency band, all sensors
+# ############
+
+# tmp=[]
+# for condi in conditions:
+#     tmp_long = pd.DataFrame(ibc_df[condi]["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch].mean(axis=(2, 3)).T)
+#     tmp_long.columns = list(freq_bands_ord.keys())
+#     tmp_long['condition']=condi
+#     tmp.append(tmp_long)
+
+# ibc_5freq_2condi = pd.concat(tmp, ignore_index=True)
+# print("SHAPE ", ibc_5freq_2condi.shape)
+
+# ibc_5freq_2condi_long = pd.melt(ibc_5freq_2condi, id_vars=['condition'],var_name='FrequencyBand', value_name='ibc')
+
+# g = sns.FacetGrid(ibc_5freq_2condi_long, col="condition", hue="FrequencyBand")
+# g.map(sns.histplot, "ibc")#, hue='FrequencyBand')
+
+# # HERE CUT
+# g = sns.displot(ibc_5freq_2condi_long, kind="kde", legend = False)
+# g.fig.subplots_adjust(top=.95)
+
+# g.ax.set_title(label='IBC value distribution for all frequency band (all sensors)', loc='left') 
+# plt.legend(title='Frequency bands', loc='upper right', labels=list(freq_bands_ord.keys())[::-1])
+# plt.savefig('{}IBC_distrib/IBC_distrib_allFreqband_allChans.{}'.format(fig_save_path, save_format))
+
 
 
 #           ###########   2. stats    ###########
@@ -155,7 +182,8 @@ for band in bands:
     print(scipy.stats.shapiro(conVal_freqSub_NS))
     print(scipy.stats.shapiro(conVal_freqSub_ES))
 
-    print('normaltest teststat = %6.3f pvalue = %6.4f' % stats.normaltest(x))
+    print('normaltest teststat = {} pvalue = {}'.format(*scipy.stats.normaltest(conVal_freqSub_ES)))
+    print('normaltest teststat = {} pvalue = {}'.format(*scipy.stats.normaltest(conVal_freqSub_NS)))
 
     # Conduct Paired Sample T-Test on IBC 
     tstatistic, pvalue= scipy.stats.ttest_rel(conVal_freqSub_NS, conVal_freqSub_ES)
@@ -184,6 +212,16 @@ for band in bands:
         
         print(scipy.stats.shapiro(conVal_freqSub_NS))
         print(scipy.stats.shapiro(conVal_freqSub_ES))
+
+        # Conduct Normal test on ES
+        tstatistic, pvalue= scipy.stats.normaltest(conVal_freqSub_ES)
+        print('\tNorm-Test Pvalue = {}'.format(pvalue))
+        if pvalue < 0.05:
+            print("\tSignificant")
+        else:
+            print("\tnon-significant")
+
+        print('\t-')
 
         # Conduct Paired Sample T-Test on IBC 
         tstatistic, pvalue= scipy.stats.ttest_rel(conVal_freqSub_NS, conVal_freqSub_ES)
