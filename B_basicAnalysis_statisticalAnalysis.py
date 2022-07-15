@@ -166,6 +166,7 @@ plt.savefig('{}IBC_distrib/IBC_distrib_allFreqband_allChans.{}'.format(fig_save_
 
 #           ###########   2. stats    ###########
 
+alpha = 0.05
 
 #%% 
 # ############ 2.1 
@@ -210,26 +211,44 @@ for band in bands:
         print("Mean IBC in NS: {}".format(ibc_df['NS']["ccorr"][fqb2idx[band]][:, cut[0], cut[1]].mean())) 
         print("Mean IBC in ES: {}".format(ibc_df['ES']["ccorr"][fqb2idx[band]][:, cut[0], cut[1]].mean())) 
         
-        print(scipy.stats.shapiro(conVal_freqSub_NS))
-        print(scipy.stats.shapiro(conVal_freqSub_ES))
+        # print(scipy.stats.shapiro(conVal_freqSub_NS))
+        # print(scipy.stats.shapiro(conVal_freqSub_ES))
 
-        # Conduct Normal test on ES
-        tstatistic, pvalue= scipy.stats.normaltest(conVal_freqSub_ES)
-        print('\tNorm-Test Pvalue = {}'.format(pvalue))
-        if pvalue < 0.05:
-            print("\tSignificant")
+        print('\t--- Test whether a sample differs from a normal distribution.\n\t(H0:sample comes from a normal distribution)')
+        
+        # First on ES
+        tstatistic, pvalue_ES= scipy.stats.normaltest(conVal_freqSub_ES)
+        if pvalue_ES < alpha:
+            print("\tES - H0 rejected ({}) -> Distribution NON-NORMAL".format(np.round(pvalue_ES, 3)))
         else:
-            print("\tnon-significant")
+            print("\tES - H0 accepted ({}) -> Distribution NORMAL".format(np.round(pvalue_ES, 3)))
 
-        print('\t-')
-
-        # Conduct Paired Sample T-Test on IBC 
-        tstatistic, pvalue= scipy.stats.ttest_rel(conVal_freqSub_NS, conVal_freqSub_ES)
-        print('\tT-Test Pvalue = {}'.format(pvalue))
-        if pvalue < 0.05:
-            print("\tSignificant difference across condition")
+        # Now on NS
+        tstatistic, pvalue_NS= scipy.stats.normaltest(conVal_freqSub_NS)
+        if pvalue_NS < alpha:
+            print("\tNS - H0 rejected ({}) -> Distribution NON-NORMAL".format(np.round(pvalue_NS, 3)))
         else:
-            print("\tnon-significant")
+            print("\tNS - H0 accepted ({}) -> Distribution NORMAL".format(np.round(pvalue_NS, 3)))
+
+        print('\t---')
+
+        # Test IBC across conditions
+        # If both dataset are normaly distributed: Paired Sample T-Test
+        if pvalue_NS < alpha and pvalue_ES < alpha: 
+            tstatistic, pvalue= scipy.stats.ttest_rel(conVal_freqSub_NS, conVal_freqSub_ES)
+            print('\tT-Test Pvalue = {}'.format(pvalue))
+            if pvalue < 0.05:
+                print("\t> SIGNIFICANT difference across condition")
+            else:
+                print("\t> Non-significant")
+        else: # Conduct non-parametric version of the paired T-test: The Wilcoxon signed-rank test
+            tstatistic, pvalue = scipy.stats.wilcoxon(conVal_freqSub_NS, conVal_freqSub_ES)
+            print('\tWilcoxon Pvalue = {}'.format(pvalue))
+            if pvalue < 0.05:
+                print("\t> SIGNIFICANT difference across condition")
+            else:
+                print("\t> Non-significant")
+        
 
 
 #%% TESTING
