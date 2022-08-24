@@ -3,7 +3,8 @@
 # @author Franck Porteous <franck.porteous@proton.me>
 
 #%% 
-from cgi import print_arguments
+# Import packages, paths, and useful variables.
+#  from cgi import print_arguments
 from hypyp import stats
 from hypyp import viz
 from hypyp import analyses
@@ -38,18 +39,18 @@ ibc_metrics = ['envelope_corr', 'pow_corr', 'plv', 'ccorr', 'coh', 'imaginary_co
 conditions  = list(df_manifest.keys())
 dyads       = list(set(df_manifest[conditions[1]]).intersection(df_manifest[conditions[0]]))
 bands       = freq_bands.keys()
-# ROIs        = 
 
 # Removing rejected dyad(s) 
 dyads.remove('36') 
 
-#%% Loading an epoch file to get useful metadata 
+#%% 
+# Loading an epoch file to get useful metadata 
 epo1 = mne.io.read_epochs_eeglab(eeg_sampl).pick_channels(ch_to_keep, ordered=False)
 n_ch = len(epo1.info['ch_names'])
 
 #%% 
 # #### Create the IBC manifest ####
-#  Output is shape (freq_banddyads, sensor(x2), sensor(x2))
+#  Output is shape (freq_banddyads, sensors(x2), sensors(x2))
 ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
     data_path    = ibc_data_path, 
     mani_path    = mani_path, # DOES'T WORK (yet) bc np.arr are multi-dim
@@ -62,11 +63,10 @@ ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
     )
 
 
-#           ###########   1. plots    ###########
-
+#           ###########   0. averages    ###########
 
 #%% 
-# ############ 1.1
+# ############ 0.1
 # Prints average IBC measure per condition x frequency band
 # ############
 
@@ -77,8 +77,9 @@ for band in bands:
         # Compute mean over all sensor
         print(condi, band, conVal.mean())
 
+
 #%% 
-# ############ 1.2
+# ############ 0.2
 # Prints average IBC measure per condition x frequency band x ROIs
 # ############
 
@@ -93,12 +94,14 @@ for band in bands:
             
             # Compute mean over selected sensors
             print(condi, band, roi, conVal.mean())
-            print("SHAPE", conVal.shape)
 
 
+#           ###########   1. plots    ###########
+
+save_plot = False
 
 #%%
-# ############ 1.3
+# ############ 1.1
 # IBC distribution across frequency band
 # ############
 
@@ -107,10 +110,11 @@ for band in bands:
     g = sns.displot(conVal_ES, kind="kde")
     g.fig.subplots_adjust(top=.95)
     g.ax.set_title('IBC value distribution in {} (all sensors)'.format(band), loc='left')
-    plt.savefig('{}IBC_distrib/all_ch/IBC_distrib_{}_all_chans.{}'.format(fig_save_path, band, save_format))
+    if save_plot:
+        plt.savefig('{}IBC_distrib/all_ch/IBC_distrib_{}_all_chans.{}'.format(fig_save_path, band, save_format))
 
 #%%
-# ############ 1.4
+# ############ 1.2
 # IBC distribution across frequency band x ROIs
 # ############
 
@@ -121,56 +125,78 @@ for band in bands:
         g = sns.displot(conVal_ES, kind="kde")
         g.fig.subplots_adjust(top=.95)
         g.ax.set_title('IBC value distribution in {} ({})'.format(band, roi), loc='left')
-        plt.savefig('{}IBC_distrib/per_band/per_roi/IBC_distrib_{}_{}_ch.{}'.format(fig_save_path, band, roi, save_format))
+        if save_plot:
+            plt.savefig('{}IBC_distrib/per_band/per_roi/{}/IBC_distrib_{}_{}.{}'.format(fig_save_path, roi, band, roi, save_format))
 
 
 #%% 
-# ############ 1.5
+# ############ 1.3
 # Average IBC per frequency band, all sensors
 # ############
 conVal_freqSub = ibc_df['ES']["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch].mean(axis=(2, 3))
 g = sns.displot(conVal_freqSub.transpose(), kind="kde", legend = False)
 g.fig.subplots_adjust(top=.95)
-g.ax.set_title(label='IBC value distribution for all frequency band (all sensors)', loc='left') 
+g.ax.set_title(label='IBC value distrib per frequency band (all sensors)', loc='left') 
 plt.legend(title='Frequency bands', loc='upper right', labels=list(freq_bands_ord.keys())[::-1])
-plt.savefig('{}IBC_distrib/IBC_distrib_allFreqband_allChans.{}'.format(fig_save_path, save_format))
+if save_plot:
+    plt.savefig('{}IBC_distrib/IBC_distrib_allFreqband_allChans.{}'.format(fig_save_path, save_format))
+
 #%% 
-# ############ 1.5 TRYOUT FOR FACET GRID
-# Average IBC per frequency band, all sensors
+# ############ 1.4
+# Average IBC per frequency band, all sensors, per condition
 # ############
 
-# tmp=[]
-# for condi in conditions:
-#     tmp_long = pd.DataFrame(ibc_df[condi]["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch].mean(axis=(2, 3)).T)
-#     tmp_long.columns = list(freq_bands_ord.keys())
-#     tmp_long['condition']=condi
-#     tmp.append(tmp_long)
+tmp=[]
+for condi in conditions:
+    tmp_long = pd.DataFrame(ibc_df[condi]["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch].mean(axis=(2, 3)).T)
+    tmp_long.columns = list(freq_bands_ord.keys())
+    tmp_long['condition']=condi
+    tmp.append(tmp_long)
 
-# ibc_5freq_2condi = pd.concat(tmp, ignore_index=True)
-# print("SHAPE ", ibc_5freq_2condi.shape)
+ibc_5freq_2condi = pd.concat(tmp, ignore_index=True)
 
-# ibc_5freq_2condi_long = pd.melt(ibc_5freq_2condi, id_vars=['condition'],var_name='FrequencyBand', value_name='ibc')
+ibc_5freq_2condi_long = pd.melt(ibc_5freq_2condi, id_vars=['condition'],var_name='FrequencyBand', value_name='ibc')
 
-# g = sns.FacetGrid(ibc_5freq_2condi_long, col="condition", hue="FrequencyBand")
-# g.map(sns.histplot, "ibc")#, hue='FrequencyBand')
+g = sns.FacetGrid(ibc_5freq_2condi_long, col="condition", hue="FrequencyBand")
+g.map(sns.histplot, "ibc")#, hue='FrequencyBand')
+if save_plot:
+    plt.savefig('{}IBC_distrib/all_ch/IBC_distrib_allFreqband_allChans_perCondition.{}'.format(fig_save_path, save_format))
 
-# # HERE CUT
-# g = sns.displot(ibc_5freq_2condi_long, kind="kde", legend = False)
-# g.fig.subplots_adjust(top=.95)
+#%% 
+# ############ 1.5
+# Average IBC per frequency band, per condition, per ROI
+# ############
 
-# g.ax.set_title(label='IBC value distribution for all frequency band (all sensors)', loc='left') 
-# plt.legend(title='Frequency bands', loc='upper right', labels=list(freq_bands_ord.keys())[::-1])
-# plt.savefig('{}IBC_distrib/IBC_distrib_allFreqband_allChans.{}'.format(fig_save_path, save_format))
+tmp=[]
+for roi in ROIs.keys():
+    for condi in conditions:
+
+        # Get (proper) indexing of the sensor for ROI
+        cut = basicAnalysis_tools.get_ch_idx(roi=roi, n_ch=n_ch, quadrant='inter')
+
+        tmp_long = pd.DataFrame(ibc_df[condi]["ccorr"][:, :, cut[0], cut[1]].mean(axis=(2, 3)).T)
+        tmp_long.columns = list(freq_bands_ord.keys())
+        tmp_long['condition']=condi
+        tmp.append(tmp_long)
+
+    ibc_5freq_2condi = pd.concat(tmp, ignore_index=True)
+    ibc_5freq_2condi_long = pd.melt(ibc_5freq_2condi, id_vars=['condition'],var_name='FrequencyBand', value_name='ibc')
+
+    g = sns.FacetGrid(ibc_5freq_2condi_long, col="condition", hue="FrequencyBand")
+    g.map(sns.histplot, "ibc")#, hue='FrequencyBand')
+    # g.axes.set_title(label='IBC value distrib ', loc='left') 
+if save_plot:
+    plt.savefig('{}IBC_distrib/per_roi/IBC_distrib_allFreqband_{}_perCondition.{}'.format(fig_save_path, roi, save_format))
 
 
-
-#           ###########   2. stats    ###########
+#%%           
+#               ###########   2. stats    ###########
 
 alpha = 0.05
 
 #%% 
 # ############ 2.1 
-# T-Testing IBC between freq band
+# T-Testing IBC between freq bands
 # ############ 
 for band in bands:
     conVal_freqSub_NS = ibc_df['NS']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
@@ -240,12 +266,12 @@ for band in bands:
             if pvalue < 0.05:
                 print("\t> SIGNIFICANT difference across condition")
             else:
-                print("\t> Non-significant")
+                print("\t> Non-significant")    
         else: # Conduct non-parametric version of the paired T-test: The Wilcoxon signed-rank test
             tstatistic, pvalue = scipy.stats.wilcoxon(conVal_freqSub_NS, conVal_freqSub_ES)
             print('\tWilcoxon Pvalue = {}'.format(pvalue))
             if pvalue < 0.05:
-                print("\t> SIGNIFICANT difference across condition")
+                print("\n\t#############\n\t> SIGNIFICANT (difference across condition)\n\t#############")
             else:
                 print("\t> Non-significant")
         

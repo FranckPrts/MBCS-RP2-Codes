@@ -58,7 +58,7 @@ df_manifest = basicAnalysis_tools.get_analysis_manifest(data_path, expConditionD
 #%% 
 # Set analyse parameters
 do_ibc          = False
-do_psd          = True
+do_psd          = False
 do_inter_cohenD = False
 do_intra_cohenD = False
 

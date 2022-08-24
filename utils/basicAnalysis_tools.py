@@ -128,7 +128,7 @@ def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metri
             if condi == 'NS':
                 ibc_manifest[condi][ibc_metric][cnt_ns] = result
                 cnt_ns += 1
-    
+
     # Reshaping the data so it can be unpacked in its freq dimension easily
     for condi in conditions:
         for ibc in ibc_metrics:
