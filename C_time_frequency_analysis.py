@@ -49,11 +49,46 @@ for condition in df_manifest.keys():
             role = sub1[-1] if whoswho[0] == '1' else sub2[-1] # Look for whos is the sub in that file (speaker vs listener)
             speaker_list.append((df_manifest[condition][dyad][i],condi)) if role == 'S' else listener_list.append((df_manifest[condition][dyad][i],condi))
 #%%
-epo = mne.io.read_epochs_eeglab('{}SNS_{}_cleaned/{}'.format(data_path, speaker_list[1][1], speaker_list[1][0])).pick_channels(ch_to_keep, ordered=False)
-psds, freq = mne.time_frequency.psd_welch(epo)
 
+all_psds = {
+    'ES':{
+        "SPEAKER":[], 
+        "LISTENER":[]}, 
+    'NS':{
+        "SPEAKER":[], 
+        "LISTENER":[]}}
 
-# #%%
+mean_epoch_count = []
+
+for condi in ['ES', 'NS']:
+  
+    for role in [(speaker_list, "SPEAKER"), (listener_list, "LISTENER")]:
+        
+        print("\n-------", condi)
+        print("\n--------------", role[1])
+        
+        for i in range(len(role[0])):
+        
+            if role[0][i][1] == condi:
+                
+                print(role[0][i][0])
+                
+                epo = mne.io.read_epochs_eeglab('{}SNS_{}_cleaned/{}'.format(data_path, condi, role[0][i][0])).pick_channels(ch_to_keep, ordered=False)
+                psds, freq = mne.time_frequency.psd_welch(epo)
+                
+                print("\t --> SHAPE: ", psds.shape)
+                mean_epoch_count.append(psds.shape[0])
+
+                all_psds[condi][role[1]].append(psds)
+
+#%% 
+np.mean(mean_epoch_count) 
+
+#%% 
+# Now compute the mean of all these psds per condi / role
+np.mean( np.array([ old_set, new_set ]), axis=0 )
+
+#%%
 
 #         # Load participant's EEG #####################################################################
 #         epo1 = mne.io.read_epochs_eeglab('{}SNS_{}_cleaned/{}'.format(data_path, condition, df_manifest[condition][dyad][0])).pick_channels(ch_to_keep, ordered=False)
