@@ -173,7 +173,7 @@ for idx, condi in enumerate(conditions):
 # Compute the mean over all subjects
 fooof_psds = fooof_psds.mean(axis=1)
 
-# The shape of np.arr fooof_psds is now (2, 22, 47) (condi, sensors, freqs)
+# The shape of np.arr fooof_psds is now (2, 22, 47) (condi [ES, NS], sensors, freqs)
 
 sns.lineplot(
     data=pd.DataFrame(list(zip(
@@ -219,7 +219,16 @@ fg = FOOOFGroup(
 freq_range = [np.min(freq), np.max(freq)]
 
 # Fit the power spectrum model across all channels
-fg.fit(freq, fooof_psds.mean(axis=0) , freq_range) # 
+looking_into = 'both'
+
+if looking_into == 'both':
+    fg.fit(freq, fooof_psds.mean(axis=0) , freq_range) # To fit all condi in SPEAKER
+elif looking_into == 'ES':
+    fg.fit(freq, fooof_psds[0] , freq_range) # To fit ES
+elif looking_into == 'NS':
+    fg.fit(freq, fooof_psds[1] , freq_range) # To fit NS
+else:
+    print('Not understood.')
 
 # Check the overall results of the group fits
 fg.plot()
@@ -260,11 +269,12 @@ for bbandd in [bands_beta_1, bands_beta_2]:
         band_power = check_nans(get_band_peak_fg(fg, band_def)[:, 1])
 
         # Create a topomap for the current oscillation band
-        mne.viz.plot_topomap(band_power, epo.info, cmap=cm.viridis, contours=0,
-                            axes=axes[ind], show=False)
+        mne.viz.plot_topomap(band_power, epo.info, cmap=cm.viridis, contours=6,
+                            axes=axes[ind], show=False, outlines='skirt', 
+                            sensors='r+', names=epo.info['ch_names'], show_names=True)
 
         # Set the plot title
-        axes[ind].set_title('{} power (Hz)'.format(str(band_def)), {'fontsize' : 20})
+        axes[ind].set_title('Power in {} (Hz) '.format(str(band_def)), {'fontsize' : 20})
 
 # %% 
 
