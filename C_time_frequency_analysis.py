@@ -2,8 +2,9 @@
 # coding=utf-8
 # @author Franck Porteous <franck.porteous@proton.me>
 
-#%% 
+# %%##########
 # Import packages, paths, and useful variables.
+# ############
 from copy import deepcopy
 
 # FOOOF imports
@@ -11,6 +12,8 @@ from fooof import FOOOFGroup
 from fooof.bands import Bands
 from fooof.analysis import get_band_peak_fg
 from fooof.plts.spectra import plot_spectrum
+
+import json
 
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors, colorbar
@@ -44,9 +47,9 @@ conditions      = ['ES', 'NS']
 
 df_manifest = basicAnalysis_tools.get_analysis_manifest(data_path, expConditionDir, save_to=None)
 
-
-# %%
+# %%##########
 # Make list of the Speaker and Listener
+# ############
 speaker_list  = []
 listener_list   = []
 
@@ -97,9 +100,16 @@ for condi in ['ES', 'NS']:
 
                 all_psds[condi][role[1]].append(psds)
 
-#%% 
 
-# ############
+# Save the computed psd manifest NOT WORKING BC TypeError: Object of type ndarray is not JSON serializable
+# Could "jsonify" np.arrays using the ".tolist()" method 
+
+# json_string = json.dumps(all_psds)
+# f = open(save_path+"PSDS_RESULTS_DICT.json","w")
+# f.write(json_string)
+# f.close()
+
+# %%##########
 # Plot PSDs for the whole spectra
 # ############
 
@@ -118,9 +128,7 @@ for condi in ['ES', 'NS']:
         sns.lineplot(data=tmp, x="Freq", y="Power", label='{} - {}'.format(condi, role)).set(title='PSD per condition & role')
 plt.legend(loc='upper right', title='Condition / Role')
 
-# %%
-
-# ############
+# %%##########
 # Plot PSDs for the beta band only
 # ############
 
@@ -143,8 +151,10 @@ for condi in ['ES', 'NS']:
         sns.lineplot(data=tmp, x="Freq (Hz)", y="Power", label='{} - {}'.format(condi, role)).set(title='PSD per condition & role (beta 16-28Hz)')
 plt.legend(loc='upper right', title='Condition / Role')
 
+del tmp
 
 #%%
+#           ###########   2. Plot topography    ###########
 
 # ############
 # Compute the average PSDs for across condition & subject for each role 
@@ -163,8 +173,20 @@ for idx, condi in enumerate(conditions):
 # Compute the mean over all subjects
 fooof_psds = fooof_psds.mean(axis=1)
 
-# %%
-# Plot topograpgy
+# The shape of np.arr fooof_psds is now (2, 22, 47) (condi, sensors, freqs)
+
+sns.lineplot(
+    data=pd.DataFrame(list(zip(
+        freq, 
+        fooof_psds.mean(axis=(0, 1)))), columns=['Freq (Hz)','Power']), 
+
+    x="Freq (Hz)", y="Power", 
+    label='PSD (all conditions / all sensors / all roles)').set(
+        title='PSD (all conditions / all sensors / all roles)')
+
+# %%##########
+# Create policy to deal with NaNs
+# ############
 
 def check_nans(data, nan_policy='zero'):
     """Check an array for nan values, and replace, based on policy."""
@@ -182,17 +204,22 @@ def check_nans(data, nan_policy='zero'):
 
     return data
 
-#%%
-
+# %%##########
 # Initialize a FOOOFGroup object, with desired settings
-fg = FOOOFGroup(peak_width_limits=[1, 6], min_peak_height=0.15,
-                peak_threshold=2., max_n_peaks=6, verbose=False)
+# ############
+
+fg = FOOOFGroup(
+    peak_width_limits=[0.5, 10],
+    min_peak_height=0.15,
+    peak_threshold=1.,
+    # max_n_peaks=20, 
+    verbose=True)
 
 # Define the frequency range to fit
-freq_range = [4.0, 50.0]
+freq_range = [np.min(freq), np.max(freq)]
 
 # Fit the power spectrum model across all channels
-fg.fit(freq, fooof_psds[0] , freq_range)
+fg.fit(freq, fooof_psds.mean(axis=0) , freq_range) # 
 
 # Check the overall results of the group fits
 fg.plot()
@@ -203,47 +230,62 @@ bands = Bands({'theta': [4, 7],
                'alpha': [7, 14],
                'beta': [15, 30]})
 
+bands_beta_1 = Bands({
+    'beta_1': [16, 18],
+    'beta_2': [18, 20],
+    'beta_3': [20, 22]})
+
+bands_beta_2 = Bands({
+    'beta_4': [22, 24],
+    'beta_5': [24, 26],
+    'beta_6': [26, 28]})
+
 # Extract alpha peaks
-alphas = get_band_peak_fg(fg, bands.alpha)
+betas = get_band_peak_fg(fg, bands.beta)
 
 # Extract the power values from the detected peaks
-alpha_pw = alphas[:, 1]
+beta_pw = betas[:, 1]
 
 # Plot the topography of alpha power
-plot_topomap(alpha_pw, epo.info, cmap=cm.viridis, contours=0)
+mne.viz.plot_topomap(beta_pw, epo.info, cmap=cm.viridis, contours=0)
 
 #%%
 
 # Plot the topographies across different frequency bands
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-for ind, (label, band_def) in enumerate(bands):
+for bbandd in [bands_beta_1, bands_beta_2]:
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    for ind, (label, band_def) in enumerate(bbandd):
 
-    # Get the power values across channels for the current band
-    band_power = check_nans(get_band_peak_fg(fg, band_def)[:, 1])
+        # Get the power values across channels for the current band
+        band_power = check_nans(get_band_peak_fg(fg, band_def)[:, 1])
 
-    # Create a topomap for the current oscillation band
-    mne.viz.plot_topomap(band_power, epo.info, cmap=cm.viridis, contours=0,
-                         axes=axes[ind], show=False);
+        # Create a topomap for the current oscillation band
+        mne.viz.plot_topomap(band_power, epo.info, cmap=cm.viridis, contours=0,
+                            axes=axes[ind], show=False)
 
-    # Set the plot title
-    axes[ind].set_title(label + ' power', {'fontsize' : 20})
+        # Set the plot title
+        axes[ind].set_title('{} power (Hz)'.format(str(band_def)), {'fontsize' : 20})
 
-#%% 
-fig, axes = plt.subplots(1, 3, figsize=(15, 6))
-for ind, (label, band_def) in enumerate(bands):
+# %% 
 
-    # Get the power values across channels for the current band
-    band_power = check_nans(get_band_peak_fg(fg, band_def)[:, 1])
+for bbandd in [bands_beta_1, bands_beta_2]:
+    fig, axes = plt.subplots(1, 3, figsize=(15, 6))
+    for ind, (label, band_def) in enumerate(bbandd):
 
-    # Extracted and plot the power spectrum model with the most band power
-    fg.get_fooof(np.argmax(band_power)).plot(ax=axes[ind], add_legend=False)
+        # Get the power values across channels for the current band
+        band_power = check_nans(get_band_peak_fg(fg, band_def)[:, 1])
 
-    # Set some plot aesthetics & plot title
-    axes[ind].yaxis.set_ticklabels([])
-    axes[ind].set_title('biggest ' + label + ' peak', {'fontsize' : 16})
+        # Extracted and plot the power spectrum model with the most band power
+        fg.get_fooof(np.argmax(band_power)).plot(ax=axes[ind], add_legend=False)
 
-
-
-
+        # Set some plot aesthetics & plot title
+        axes[ind].yaxis.set_ticklabels([])
+        axes[ind].set_title('biggest ' + label + ' peak', {'fontsize' : 16})
 
 
+
+
+
+
+
+# %%
