@@ -219,13 +219,13 @@ fg = FOOOFGroup(
 freq_range = [np.min(freq), np.max(freq)]
 
 # Fit the power spectrum model across all channels
-looking_into = 'both'
+looking_into_condi = 'both'
 
-if looking_into == 'both':
+if looking_into_condi == 'both':
     fg.fit(freq, fooof_psds.mean(axis=0) , freq_range) # To fit all condi in SPEAKER
-elif looking_into == 'ES':
+elif looking_into_condi == 'ES':
     fg.fit(freq, fooof_psds[0] , freq_range) # To fit ES
-elif looking_into == 'NS':
+elif looking_into_condi == 'NS':
     fg.fit(freq, fooof_psds[1] , freq_range) # To fit NS
 else:
     print('Not understood.')
@@ -249,6 +249,8 @@ bands_beta_2 = Bands({
     'beta_5': [24, 26],
     'beta_6': [26, 28]})
 
+unique_band = Bands({'beta':[15, 20], 'beta_2':[15, 20]})
+
 # Extract alpha peaks
 betas = get_band_peak_fg(fg, bands.beta)
 
@@ -263,7 +265,7 @@ mne.viz.plot_topomap(beta_pw, epo.info, cmap=cm.viridis, contours=0)
 # Plot the topographies across different frequency bands
 for bbandd in [bands_beta_1, bands_beta_2]:
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    for ind, (label, band_def) in enumerate(bbandd):
+    for ind, (label, band_def) in enumerate(unique_band):
 
         # Get the power values across channels for the current band
         band_power = check_nans(get_band_peak_fg(fg, band_def)[:, 1])
@@ -275,6 +277,7 @@ for bbandd in [bands_beta_1, bands_beta_2]:
 
         # Set the plot title
         axes[ind].set_title('Power in {} (Hz) '.format(str(band_def)), {'fontsize' : 20})
+
 
 # %% 
 
@@ -291,7 +294,6 @@ for bbandd in [bands_beta_1, bands_beta_2]:
         # Set some plot aesthetics & plot title
         axes[ind].yaxis.set_ticklabels([])
         axes[ind].set_title('biggest ' + label + ' peak', {'fontsize' : 16})
-
 
 
 
