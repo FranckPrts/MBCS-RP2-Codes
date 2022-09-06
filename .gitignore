@@ -1,2 +1,12 @@
+#macOS
 .DS_Store
+
+#python
 __pycache__/
+
+# fooof extras
+data/
+fooof-example/
+
+#ploting path
+plots alias

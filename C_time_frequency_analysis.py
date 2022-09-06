@@ -42,6 +42,7 @@ psds_result_allFreq  = "results_psds_allFreq/"
 
 expConditionDir = ['SNS_ES_cleaned', 'SNS_NS_cleaned']
 conditions      = ['ES', 'NS']
+roles           = ['SPEAKER', 'LISTENER']
 
 #%% 
 
@@ -128,6 +129,8 @@ for condi in ['ES', 'NS']:
         sns.lineplot(data=tmp, x="Freq", y="Power", label='{} - {}'.format(condi, role)).set(title='PSD per condition & role')
 plt.legend(loc='upper right', title='Condition / Role')
 
+del avr_psd
+
 # %%##########
 # Plot PSDs for the beta band only
 # ############
@@ -160,32 +163,63 @@ del tmp
 # Compute the average PSDs for across condition & subject for each role 
 # ############
 
-fooof_psds = np.zeros((len(conditions), len(df_manifest['ES']), epo.info['nchan'], len(freq)))  # ES will be at index 0 and NS at index 1
+# fooof_psds = np.zeros((len(conditions), len(df_manifest['ES']), epo.info['nchan'], len(freq)))  # ES will be at index 0 and NS at index 1
 
-for idx, condi in enumerate(conditions): 
 
-    # loop over all SPEAKER subject
-    for i in range(len(all_psds[condi]["SPEAKER"])):
+# for idx, condi in enumerate(conditions): 
+
+#     # loop over all SPEAKER subject
+#     for i in range(len(all_psds[condi]["SPEAKER"])):
         
-        # Compute mean over the epoch dimension
-        fooof_psds[idx][i] = np.mean(all_psds[condi]["SPEAKER"][i], axis=0)
+#         # Compute mean over the epoch dimension
+#         fooof_psds[idx][i] = np.mean(all_psds[condi]["SPEAKER"][i], axis=0)
 
+# # Compute the mean over all subjects
+# fooof_psds = fooof_psds.mean(axis=1)
+
+
+
+
+#%%
+# Initialize fooof df with (roles, condis , sensors, freqs)
+
+all_fooof_psds = np.zeros((len(roles), len(conditions), len(df_manifest['ES']), epo.info['nchan'], len(freq)))  # ES will be at index 0 and NS at index 1
+
+
+for role_idx, role in enumerate(roles):
+    for idx, condi in enumerate(conditions): 
+        for i in range(len(all_psds[condi][role])):
+            
+            if all_psds[condi][role][i].shape[1] != 22:
+                pass
+            else:
+                # Compute mean over the epoch dimension
+                all_fooof_psds[role_idx][idx][i] = np.mean(all_psds[condi][role][i], axis=0)
+
+#########
+# The shape of np.arr fooof_psds is now \
+#               (2, 2, 22, 47) 
+#               (role [SPEAKER, LISTENER], condi [ES, NS], sensors, freqs)
+#########
+
+#%%
 # Compute the mean over all subjects
-fooof_psds = fooof_psds.mean(axis=1)
+all_fooof_psds = all_fooof_psds.mean(axis=2)
 
-# The shape of np.arr fooof_psds is now (2, 22, 47) (condi [ES, NS], sensors, freqs)
+#%% 
+# Plot all averaged PSD
 
 sns.lineplot(
     data=pd.DataFrame(list(zip(
         freq, 
-        fooof_psds.mean(axis=(0, 1)))), columns=['Freq (Hz)','Power']), 
+        all_fooof_psds.mean(axis=(0, 1, 2)))), columns=['Freq (Hz)','Power']), 
 
     x="Freq (Hz)", y="Power", 
     label='PSD (all conditions / all sensors / all roles)').set(
         title='PSD (all conditions / all sensors / all roles)')
 
 # %%##########
-# Create policy to deal with NaNs
+# Define NaNs policy, Initialize FOOOFGroup w/ desired settings, and filter psd df
 # ############
 
 def check_nans(data, nan_policy='zero'):
@@ -204,10 +238,6 @@ def check_nans(data, nan_policy='zero'):
 
     return data
 
-# %%##########
-# Initialize a FOOOFGroup object, with desired settings
-# ############
-
 fg = FOOOFGroup(
     peak_width_limits=[0.5, 10],
     min_peak_height=0.15,
@@ -218,10 +248,20 @@ fg = FOOOFGroup(
 # Define the frequency range to fit
 freq_range = [np.min(freq), np.max(freq)]
 
-# Fit the power spectrum model across all channels
-looking_into_condi = 'both'
+# Select which role to look into  
+looking_into_role = 'listener'
+if looking_into_role == 'both roles':
+    fooof_psds = all_fooof_psds.mean(0)
+elif looking_into_role == 'speaker':
+    fooof_psds = all_fooof_psds[0]
+elif looking_into_role == 'listener':
+    fooof_psds = all_fooof_psds[1]
+else:
+    print('Not understood.')
 
-if looking_into_condi == 'both':
+# Fit the power spectrum model across all channels in condition of choice
+looking_into_condi = 'NS'
+if looking_into_condi == 'both conditions':
     fg.fit(freq, fooof_psds.mean(axis=0) , freq_range) # To fit all condi in SPEAKER
 elif looking_into_condi == 'ES':
     fg.fit(freq, fooof_psds[0] , freq_range) # To fit ES
@@ -233,8 +273,10 @@ else:
 # Check the overall results of the group fits
 fg.plot()
 
-#%%
+# %%##########
 # Define frequency bands of interest
+# ############
+
 bands = Bands({'theta': [4, 7],
                'alpha': [7, 14],
                'beta': [15, 30]})
@@ -251,35 +293,40 @@ bands_beta_2 = Bands({
 
 unique_band = Bands({'beta':[15, 20], 'beta_2':[15, 20]})
 
-# Extract alpha peaks
-betas = get_band_peak_fg(fg, bands.beta)
+# # Extract alpha peaks
+# betas = get_band_peak_fg(fg, bands.beta)
 
-# Extract the power values from the detected peaks
-beta_pw = betas[:, 1]
+# # Extract the power values from the detected peaks
+# beta_pw = betas[:, 1]
 
-# Plot the topography of alpha power
-mne.viz.plot_topomap(beta_pw, epo.info, cmap=cm.viridis, contours=0)
+# # Plot the topography of alpha power
+# mne.viz.plot_topomap(beta_pw, epo.info, cmap=cm.viridis, contours=0)
 
-#%%
-
+# %%##########
 # Plot the topographies across different frequency bands
+# ############
 for bbandd in [bands_beta_1, bands_beta_2]:
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    for ind, (label, band_def) in enumerate(unique_band):
+    fig.suptitle('Topographic map for beta power\nfor {} in {}'.format(
+        looking_into_role, looking_into_condi), 
+        y=1.15, size=22, weight='regular')
+    for ind, (label, band_def) in enumerate(bbandd):
 
         # Get the power values across channels for the current band
         band_power = check_nans(get_band_peak_fg(fg, band_def)[:, 1])
 
         # Create a topomap for the current oscillation band
         mne.viz.plot_topomap(band_power, epo.info, cmap=cm.viridis, contours=6,
-                            axes=axes[ind], show=False, outlines='skirt', 
+                            axes=axes[ind], show=False, outlines='skirt', res=50,
                             sensors='r+', names=epo.info['ch_names'], show_names=True)
 
         # Set the plot title
-        axes[ind].set_title('Power in {} (Hz) '.format(str(band_def)), {'fontsize' : 20})
+        axes[ind].set_title('[{}-{}] Hz'.format(str(band_def[0]), str(band_def[1])), {'fontsize' : 20})
 
 
-# %% 
+# %%##########
+# Plot model fit
+# ############
 
 for bbandd in [bands_beta_1, bands_beta_2]:
     fig, axes = plt.subplots(1, 3, figsize=(15, 6))
