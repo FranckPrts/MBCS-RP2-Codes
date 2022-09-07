@@ -6,15 +6,13 @@
 from collections import OrderedDict
 
 from hypyp import analyses
-from hypyp import viz, stats
-
-import json
 
 import mne
 import numpy as np
 
 # Import custom tools
 from utils import basicAnalysis_tools
+from utils.useful_variable import *
 
 mne.set_log_level('warning')
 # matplotlib.use('Qt5Agg')
@@ -23,8 +21,13 @@ mne.set_log_level('warning')
 data_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/EEG_data_cleaned/"
 save_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/"
 
-complex_sig  = "results_complex_signal/"
-ibc_result   = "results_ibc/"
+# Here, choose where to save specific results without overwritting #######
+# complex_sig  = "results_complex_signal/" # All 5 basic freq band
+complex_sig  = "SELECTED_results_complex_signal/" # For specific freq band analysis
+
+# ibc_result   = "results_ibc/"
+ibc_result   = "SELECTED_results_ibc/"
+
 c_value      = "results_cohensD/"
 psds_result  = "results_psds/"
 
@@ -43,13 +46,25 @@ ch_to_keep= [
     'Fz', 'Cz', 'Pz', 
     'AFz', 'CPz', 'POz']
 
-freq_bands = {'Theta': [4.0, 7.0],
-              'Alpha-Low': [7.5, 11.0],
-              'Alpha-High': [11.5, 13.0],
-              'Beta': [13.5, 29.5],
-              'Gamma': [30.0, 48.0]} 
+# freq_bands = {'Theta': [4.0, 7.0],
+#               'Alpha-Low': [7.5, 11.0],
+#               'Alpha-High': [11.5, 13.0],
+#               'Beta': [13.5, 29.5],
+#               'Gamma': [30.0, 48.0]} 
 
 freq_bands = OrderedDict(freq_bands)
+
+# %% ####### Uncoment only to use the 'Selected' freq band #######
+# ################################################################
+to_pop_out = []
+
+for i in freq_bands.keys():
+    if i != 'Selected':
+        to_pop_out.append(i)
+for i in to_pop_out:
+    del freq_bands[i]
+# ################################################################
+# ################################################################
 
 #%%
 # Get analysis manifest
@@ -57,8 +72,8 @@ df_manifest = basicAnalysis_tools.get_analysis_manifest(data_path, expConditionD
 
 #%% 
 # Set analyse parameters
-do_ibc          = False
-do_psd          = False
+do_ibc          = True
+do_psd          = True
 do_inter_cohenD = False
 do_intra_cohenD = False
 
@@ -125,12 +140,14 @@ for condition in df_manifest.keys():
             print("- - - - > Computing analytic signal per frequency band ...")
             sampling_rate = epo1.info['sfreq']
             complex_signal = analyses.compute_freq_bands(data_inter, sampling_rate, freq_bands) # (2sub, n_epochs, n_channels, n_freq_bands, n_times)
-            np.save(save_path+complex_sig+"dyad_"+dyad+"_condition_"+condition+"_complexsignal.npy", complex_signal, allow_pickle=False)
+            np.save("{}{}dyad_{}_condition_{}_complexsignal.npy".format(save_path, complex_sig, dyad, condition, complex_signal), complex_signal, allow_pickle=False)
+            # np.save(save_path+complex_sig+"dyad_"+dyad+"_condition_"+condition+"_complexsignal.npy", complex_signal, allow_pickle=False)
 
             # Computing frequency- and time-frequency-domain connectivity ################################
             print("- - - - > Computing frequency- and time-frequency-domain connectivity ...")
             result = analyses.compute_sync(complex_signal, mode=ibc_metric, epochs_average=True) # (n_freq, 2*n_channels, 2*n_channels)
-            np.save(save_path+ibc_result+"dyad_"+dyad+"_condition_"+condition+"_IBC_"+ibc_metric+".npy", result, allow_pickle=False)
+            np.save("{}{}dyad_{}_condition_{}_IBC_{}.npy".format(save_path, ibc_result, dyad, condition, ibc_metric), result, allow_pickle=False)
+            # np.save(save_path+ibc_result+"dyad_"+dyad+"_condition_"+condition+"_IBC_"+ibc_metric+".npy", result, allow_pickle=False)
 
         # ################# INTER #####################################################
         if do_inter_cohenD:    
