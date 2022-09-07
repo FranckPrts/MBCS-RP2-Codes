@@ -157,7 +157,7 @@ def get_ch_idx(roi:str(), n_ch:int(), quadrant:str()):
     from .useful_variable import ROIs, ch2idx
 
     assert quadrant in ['inter', 'intra_A', 'intra_B'], "Quadrand is wrong"
-    assert roi in ['Frontal', 'Temporal', 'Occipital', 'Parietal'], "Roi is not defined"
+    assert roi in ['Frontal', 'Temporal', 'Occipital', 'Parietal', 'Selected'], "Roi is not defined"
     
     cut1 = []
     for ch in ROIs[roi]:
