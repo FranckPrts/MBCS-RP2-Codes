@@ -85,7 +85,7 @@ def add_reject_ch_manifest(condition:str, dyad:str, sub_fname, reject:list, save
 
     print(">> Reject of {} for {} (dyad {}) in condition {}".format(reject, sub_fname, dyad, condition))
 
-def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metrics:list, n_ch:int, nb_freq_band:int, save:bool = True, specific_file:str = None):
+def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metrics:list, ok_dyad:list, n_ch:int, nb_freq_band:int, save:bool = True, specific_file:str = None, check_for_shape:bool = True):
     
     # If the user just want to load a file. Caution! the output is then different.
     if specific_file is not None:
@@ -114,20 +114,32 @@ def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metri
     for file in glob.glob(data_path+"*.npy"):
         #  Assuming the following file convention: dyad_{DYAD#}_condition_{CONDITION}_IBC_{ccorr, plv...}.npy
         _, dyad, _, condi, _, ibc_metric = file.split("/")[-1].split('_')
-        ibc_metric = ibc_metric[:-4]
-        result = np.load(file)
-
-        if result.shape != (nb_freq_band, n_ch*2, n_ch*2):
-            print("Not dealing with dyad #{} (cond: {}) because its 'result' has shape {} instead of {}".format(dyad, condi, result.shape, (nb_freq_band, n_ch*2, n_ch*2)))
-            reject.append([dyad, condi])
+        
+        if str(dyad) not in ok_dyad:
             pass
         else:
-            if condi == 'ES':
-                ibc_manifest[condi][ibc_metric][cnt_es] = result
-                cnt_es += 1
-            if condi == 'NS':
-                ibc_manifest[condi][ibc_metric][cnt_ns] = result
-                cnt_ns += 1
+            ibc_metric = ibc_metric[:-4]
+            result = np.load(file)
+
+            if check_for_shape:
+                if result.shape != (nb_freq_band, n_ch*2, n_ch*2):
+                    print("Not dealing with dyad #{} (cond: {}) because its 'result' has shape {} instead of {}".format(dyad, condi, result.shape, (nb_freq_band, n_ch*2, n_ch*2)))
+                    reject.append([dyad, condi])
+                    pass
+                else:
+                    if condi == 'ES':
+                        ibc_manifest[condi][ibc_metric][cnt_es] = result
+                        cnt_es += 1
+                    if condi == 'NS':
+                        ibc_manifest[condi][ibc_metric][cnt_ns] = result
+                        cnt_ns += 1
+            else:
+                if condi == 'ES':
+                    ibc_manifest[condi][ibc_metric][cnt_es] = result
+                    cnt_es += 1
+                if condi == 'NS':
+                    ibc_manifest[condi][ibc_metric][cnt_ns] = result
+                    cnt_ns += 1
 
     # Reshaping the data so it can be unpacked in its freq dimension easily
     for condi in conditions:
@@ -157,7 +169,6 @@ def get_ch_idx(roi:str(), n_ch:int(), quadrant:str()):
     from .useful_variable import ROIs, ch2idx
 
     assert quadrant in ['inter', 'intra_A', 'intra_B'], "Quadrand is wrong"
-    assert roi in ['Frontal', 'Temporal', 'Occipital', 'Parietal', 'Selected'], "Roi is not defined"
     
     cut1 = []
     for ch in ROIs[roi]:
