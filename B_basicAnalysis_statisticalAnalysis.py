@@ -26,8 +26,11 @@ mne.set_log_level('warning')
 eeg_sampl       = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/samples/sample_epochs.set"
 mani_path       = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/"
 fig_save_path   = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/plots/"
-ibc_data_path   = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/results_ibc/"
 psd_data_path   = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/results_psds/"
+
+# Select wether to look at SELECTED freq or normal freq band
+ibc_data_path   = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/SELECTED_results_ibc/"
+# ibc_data_path   = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/results_ibc/"
 
 save_format = 'pdf'
 
@@ -41,7 +44,28 @@ dyads       = list(set(df_manifest[conditions[1]]).intersection(df_manifest[cond
 bands       = freq_bands.keys()
 
 # Removing rejected dyad(s) 
-dyads.remove('36') 
+dyads.remove('36') # 36 was removed because of missing channels
+
+# %% ####### Uncoment only to use the 'Selected' freq band #######
+# ################################################################
+to_pop_out = []
+for i in freq_bands.keys():
+    if i != 'Selected_freqBand':
+        to_pop_out.append(i)
+for i in to_pop_out:
+    del freq_bands[i]
+
+to_pop_out = []
+for i in ROIs.keys():
+    if i != 'Selected_sensors':
+        to_pop_out.append(i)
+for i in to_pop_out:
+    del ROIs[i]
+
+del to_pop_out
+# ################################################################
+# ################################################################
+
 
 #%% 
 # Loading an epoch file to get useful metadata 
@@ -56,9 +80,11 @@ ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
     mani_path    = mani_path, # DOES'T WORK (yet) bc np.arr are multi-dim
     conditions   = conditions,
     ibc_metrics  = ['ccorr'],
+    ok_dyad      = dyads,
     n_ch         = n_ch,
     nb_freq_band = len(freq_bands.keys()), 
     # specific_file ='dyad_16_condition_ES_IBC_ccorr.npy',
+    check_for_shape = False, # Leave to false when studying 'SELECTED' freq band
     save         = True
     )
 
@@ -96,7 +122,7 @@ for band in bands:
             print(condi, band, roi, conVal.mean())
 
 
-#           ###########   1. plots    ###########
+#%%         ###########   1. plots    ###########
 
 save_plot = False
 
@@ -202,9 +228,10 @@ for band in bands:
     conVal_freqSub_NS = ibc_df['NS']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
     conVal_freqSub_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
 
-    print("\n"+band)# Print band then average value
+    print("\nLooking into {}".format(band))# Print band then average value
     print("Mean IBC in NS: {}".format(ibc_df['NS']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean())) 
     print("Mean IBC in ES: {}".format(ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean())) 
+    print("\n")
     
     print(scipy.stats.shapiro(conVal_freqSub_NS))
     print(scipy.stats.shapiro(conVal_freqSub_ES))
@@ -216,9 +243,9 @@ for band in bands:
     tstatistic, pvalue= scipy.stats.ttest_rel(conVal_freqSub_NS, conVal_freqSub_ES)
     print('\tT-Test Pvalue = {}'.format(pvalue))
     if pvalue < 0.05:
-        print("\tSignificant difference across condition")
+        print("\t>>> Significant difference across condition <<<")
     else:
-        print("\tnon-significant")
+        print("\t>>> non-significant <<<")
 #%% 
 # ############ 2.2 
 # T-Testing IBC between freq band x ROIs
@@ -243,14 +270,14 @@ for band in bands:
         print('\t--- Test whether a sample differs from a normal distribution.\n\t(H0:sample comes from a normal distribution)')
         
         # First on ES
-        tstatistic, pvalue_ES= scipy.stats.normaltest(conVal_freqSub_ES)
+        tstatistic, pvalue_ES= scipy.stats.shapiro(conVal_freqSub_ES)
         if pvalue_ES < alpha:
             print("\tES - H0 rejected ({}) -> Distribution NON-NORMAL".format(np.round(pvalue_ES, 3)))
         else:
             print("\tES - H0 accepted ({}) -> Distribution NORMAL".format(np.round(pvalue_ES, 3)))
 
         # Now on NS
-        tstatistic, pvalue_NS= scipy.stats.normaltest(conVal_freqSub_NS)
+        tstatistic, pvalue_NS= scipy.stats.shapiro(conVal_freqSub_NS)
         if pvalue_NS < alpha:
             print("\tNS - H0 rejected ({}) -> Distribution NON-NORMAL".format(np.round(pvalue_NS, 3)))
         else:
