@@ -46,7 +46,8 @@ bands       = freq_bands.keys()
 # Removing rejected dyad(s) 
 dyads.remove('36') # 36 was removed because of missing channels
 
-# %% ####### Uncoment only to use the 'Selected' freq band #######
+# %% #############################################################
+# Uncoment only to use the 'Selected' freq band #######
 # ################################################################
 to_pop_out = []
 for i in freq_bands.keys():
@@ -65,8 +66,6 @@ for i in to_pop_out:
 del to_pop_out
 # ################################################################
 # ################################################################
-
-
 #%% 
 # Loading an epoch file to get useful metadata 
 epo1 = mne.io.read_epochs_eeglab(eeg_sampl).pick_channels(ch_to_keep, ordered=False)
@@ -101,7 +100,9 @@ for band in bands:
         #  Slice the INTER part of the matrice for each frequency band
         conVal = ibc_df[condi]["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch]
         # Compute mean over all sensor
-        print(condi, band, conVal.mean())
+        print("{} – {} : {} (sd={}, n={})".format(
+            condi, freq_bands[band], 
+            conVal.mean(), conVal.std(), conVal.size))
 
 
 #%% 

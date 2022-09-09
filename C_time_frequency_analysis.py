@@ -249,7 +249,7 @@ fg = FOOOFGroup(
 freq_range = [np.min(freq), np.max(freq)]
 
 # Select which role to look into  
-looking_into_role = 'listener'
+looking_into_role = 'speaker'
 if looking_into_role == 'both roles':
     fooof_psds = all_fooof_psds.mean(0)
 elif looking_into_role == 'speaker':
@@ -260,7 +260,7 @@ else:
     print('Not understood.')
 
 # Fit the power spectrum model across all channels in condition of choice
-looking_into_condi = 'NS'
+looking_into_condi = 'ES'
 if looking_into_condi == 'both conditions':
     fg.fit(freq, fooof_psds.mean(axis=0) , freq_range) # To fit all condi in SPEAKER
 elif looking_into_condi == 'ES':
@@ -342,9 +342,10 @@ for bbandd in [bands_beta_1, bands_beta_2]:
         axes[ind].yaxis.set_ticklabels([])
         axes[ind].set_title('biggest ' + label + ' peak', {'fontsize' : 16})
 
+# %%##########
+# Plot head model
+# ############
 
-
-
-
+epo.plot_sensors(kind='topomap', show_names=True)
 
 # %%
