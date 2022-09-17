@@ -70,7 +70,7 @@ for condition in df_manifest.keys():
 # Compute PSDs 
 # ############
 
-input('sure you wanna do that?')
+input('sure you wanna do that? (if not, you can still interrupt the process)')
 
 all_psds = {
     'ES':{
@@ -198,8 +198,8 @@ for role_idx, role in enumerate(roles):
 
 #########
 # The shape of np.arr fooof_psds is now \
-#               (2, 2, 22, 47) 
-#               (role [SPEAKER, LISTENER], condi [ES, NS], sensors, freqs)
+#               (2, 2, 36, 22, 47) 
+#               (role [SPEAKER, LISTENER], condi [ES, NS], subjects, sensors, freqs)
 #########
 
 #%%
@@ -260,7 +260,7 @@ else:
     print('Not understood.')
 
 # Fit the power spectrum model across all channels in condition of choice
-looking_into_condi = 'ES'
+looking_into_condi = 'both conditions'
 if looking_into_condi == 'both conditions':
     fg.fit(freq, fooof_psds.mean(axis=0) , freq_range) # To fit all condi in SPEAKER
 elif looking_into_condi == 'ES':
@@ -272,6 +272,7 @@ else:
 
 # Check the overall results of the group fits
 fg.plot()
+fg.print_results()
 
 # %%##########
 # Define frequency bands of interest

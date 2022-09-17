@@ -59,7 +59,7 @@ freq_bands = OrderedDict(freq_bands)
 to_pop_out = []
 
 for i in freq_bands.keys():
-    if i != 'Selected':
+    if i != 'Selected_freqBand':
         to_pop_out.append(i)
 for i in to_pop_out:
     del freq_bands[i]
@@ -141,13 +141,11 @@ for condition in df_manifest.keys():
             sampling_rate = epo1.info['sfreq']
             complex_signal = analyses.compute_freq_bands(data_inter, sampling_rate, freq_bands) # (2sub, n_epochs, n_channels, n_freq_bands, n_times)
             np.save("{}{}dyad_{}_condition_{}_complexsignal.npy".format(save_path, complex_sig, dyad, condition, complex_signal), complex_signal, allow_pickle=False)
-            # np.save(save_path+complex_sig+"dyad_"+dyad+"_condition_"+condition+"_complexsignal.npy", complex_signal, allow_pickle=False)
 
             # Computing frequency- and time-frequency-domain connectivity ################################
             print("- - - - > Computing frequency- and time-frequency-domain connectivity ...")
             result = analyses.compute_sync(complex_signal, mode=ibc_metric, epochs_average=True) # (n_freq, 2*n_channels, 2*n_channels)
             np.save("{}{}dyad_{}_condition_{}_IBC_{}.npy".format(save_path, ibc_result, dyad, condition, ibc_metric), result, allow_pickle=False)
-            # np.save(save_path+ibc_result+"dyad_"+dyad+"_condition_"+condition+"_IBC_"+ibc_metric+".npy", result, allow_pickle=False)
 
         # ################# INTER #####################################################
         if do_inter_cohenD:    
