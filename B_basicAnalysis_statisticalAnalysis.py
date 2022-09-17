@@ -5,6 +5,7 @@
 #%% 
 # Import packages, paths, and useful variables.
 #  from cgi import print_arguments
+from tkinter.tix import Tree
 from hypyp import stats
 from hypyp import viz
 from hypyp import analyses
@@ -49,6 +50,8 @@ dyads.remove('36') # 36 was removed because of missing channels
 # %% #############################################################
 # Uncoment only to use the 'Selected' freq band #######
 # ################################################################
+
+selected_analysis = True
 to_pop_out = []
 for i in freq_bands.keys():
     if i != 'Selected_freqBand':
@@ -62,14 +65,15 @@ for i in ROIs.keys():
         to_pop_out.append(i)
 for i in to_pop_out:
     del ROIs[i]
-
 del to_pop_out
+
 # ################################################################
 # ################################################################
 #%% 
 # Loading an epoch file to get useful metadata 
 epo1 = mne.io.read_epochs_eeglab(eeg_sampl).pick_channels(ch_to_keep, ordered=False)
 n_ch = len(epo1.info['ch_names'])
+
 
 #%% 
 # #### Create the IBC manifest ####
@@ -85,7 +89,7 @@ ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
     # specific_file ='dyad_16_condition_ES_IBC_ccorr.npy',
     check_for_shape = False, # Leave to false when studying 'SELECTED' freq band
     save         = True
-    )
+    )   
 
 
 #           ###########   0. averages    ###########
@@ -120,7 +124,9 @@ for band in bands:
             # conVal = ibc_df[condi]["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch] # archive
             
             # Compute mean over selected sensors
-            print(condi, band, roi, conVal.mean())
+            print("{} – {} – {}: {} (sd={}, n={})".format(
+                condi, freq_bands[band], ROIs[roi],
+                conVal.mean(), conVal.std(), conVal.size))
 
 
 #%%         ###########   1. plots    ###########
@@ -136,9 +142,9 @@ for band in bands:
     conVal_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
     g = sns.displot(conVal_ES, kind="kde")
     g.fig.subplots_adjust(top=.95)
-    g.ax.set_title('IBC value distribution in {} (all sensors)'.format(band), loc='left')
+    g.ax.set_title('IBC value distribution for {} Hz \nIn (all sensors, all roles)'.format(freq_bands[band]), loc='left')
     if save_plot:
-        plt.savefig('{}IBC_distrib/all_ch/IBC_distrib_{}_all_chans.{}'.format(fig_save_path, band, save_format))
+        plt.savefig('{}IBC_distrib/all_ch/IBC_distrib_{}_all_chans.{}'.format(fig_save_path, freq_bands[band], save_format))
 
 #%%
 # ############ 1.2
@@ -160,13 +166,13 @@ for band in bands:
 # ############ 1.3
 # Average IBC per frequency band, all sensors
 # ############
-conVal_freqSub = ibc_df['ES']["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch].mean(axis=(2, 3))
-g = sns.displot(conVal_freqSub.transpose(), kind="kde", legend = False)
-g.fig.subplots_adjust(top=.95)
-g.ax.set_title(label='IBC value distrib per frequency band (all sensors)', loc='left') 
-plt.legend(title='Frequency bands', loc='upper right', labels=list(freq_bands_ord.keys())[::-1])
-if save_plot:
-    plt.savefig('{}IBC_distrib/IBC_distrib_allFreqband_allChans.{}'.format(fig_save_path, save_format))
+# conVal_freqSub = ibc_df['ES']["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch].mean(axis=(2, 3))
+# g = sns.displot(conVal_freqSub.transpose(), kind="kde", legend = False)
+# g.fig.subplots_adjust(top=.95)
+# g.ax.set_title(label='IBC value distrib per frequency band (all sensors)', loc='left') 
+# plt.legend(title='Frequency bands', loc='upper right', labels=list(freq_bands_ord.keys())[::-1])
+# if save_plot:
+#     plt.savefig('{}IBC_distrib/IBC_distrib_allFreqband_allChans.{}'.format(fig_save_path, save_format))
 
 #%% 
 # ############ 1.4
@@ -176,7 +182,10 @@ if save_plot:
 tmp=[]
 for condi in conditions:
     tmp_long = pd.DataFrame(ibc_df[condi]["ccorr"][:, :, 0:n_ch, n_ch:2*n_ch].mean(axis=(2, 3)).T)
-    tmp_long.columns = list(freq_bands_ord.keys())
+    if selected_analysis:
+        tmp_long.columns = ["Selected_FreqBand"]
+    else:
+        tmp_long.columns = list(freq_bands_ord.keys())
     tmp_long['condition']=condi
     tmp.append(tmp_long)
 
@@ -194,26 +203,59 @@ if save_plot:
 # Average IBC per frequency band, per condition, per ROI
 # ############
 
-tmp=[]
 for roi in ROIs.keys():
+    print(roi)
+  
+    # Get (proper) indexing of the sensor for ROI
+    cut = basicAnalysis_tools.get_ch_idx(roi=roi, n_ch=n_ch, quadrant='inter')
+  
+    tmp=[]
+  
     for condi in conditions:
 
-        # Get (proper) indexing of the sensor for ROI
-        cut = basicAnalysis_tools.get_ch_idx(roi=roi, n_ch=n_ch, quadrant='inter')
-
         tmp_long = pd.DataFrame(ibc_df[condi]["ccorr"][:, :, cut[0], cut[1]].mean(axis=(2, 3)).T)
-        tmp_long.columns = list(freq_bands_ord.keys())
+        
+        if selected_analysis:
+            tmp_long.columns = ["Selected_FreqBand"]
+        else:
+            tmp_long.columns = list(freq_bands_ord.keys())
+
         tmp_long['condition']=condi
         tmp.append(tmp_long)
+        del tmp_long
 
     ibc_5freq_2condi = pd.concat(tmp, ignore_index=True)
-    ibc_5freq_2condi_long = pd.melt(ibc_5freq_2condi, id_vars=['condition'],var_name='FrequencyBand', value_name='ibc')
+    
+    ibc_5freq_2condi_long = pd.melt(
+        ibc_5freq_2condi, 
+        # id_vars=['condition'],var_name='FrequencyBand', 
+        id_vars=['condition'],var_name='FreqBands', 
+        value_name='ibc')
 
-    g = sns.FacetGrid(ibc_5freq_2condi_long, col="condition", hue="FrequencyBand")
-    g.map(sns.histplot, "ibc")#, hue='FrequencyBand')
-    # g.axes.set_title(label='IBC value distrib ', loc='left') 
-if save_plot:
-    plt.savefig('{}IBC_distrib/per_roi/IBC_distrib_allFreqband_{}_perCondition.{}'.format(fig_save_path, roi, save_format))
+    if selected_analysis:
+        g = sns.FacetGrid(
+                ibc_5freq_2condi_long, 
+                hue="FreqBands", 
+                col="condition")
+        g.map(sns.histplot, "ibc")#, hue='FrequencyBand')
+        if save_plot:
+            plt.savefig('{}IBC_distrib/per_roi/IBC_distrib_selectedFreqband_selectedROI_perCondition.{}'.format(fig_save_path, save_format))
+
+    else:
+        for band in freq_bands_ord.keys():
+
+            tmp_plot = ibc_5freq_2condi_long[ibc_5freq_2condi_long["FreqBands"].str.contains(band)]
+            print(band, tmp_plot.shape)
+            
+            g = sns.FacetGrid(
+                tmp_plot, 
+                hue="FreqBands", 
+                col="condition")
+            g.map(sns.histplot, "ibc")#, hue='FrequencyBand')
+                
+            # g.axes.set_title(label='IBC value distrib ', loc='left') 
+            if save_plot:
+                plt.savefig('{}IBC_distrib/per_roi/IBC_distrib_{}_{}_perCondition.{}'.format(fig_save_path, band, roi, save_format))
 
 
 #%%           
@@ -225,24 +267,23 @@ alpha = 0.05
 # ############ 2.1 
 # T-Testing IBC between freq bands
 # ############ 
+
+print("Testing if IBC is significantly differen across condition (ALL SENSORS)\n")
 for band in bands:
     conVal_freqSub_NS = ibc_df['NS']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
     conVal_freqSub_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean(axis=(1, 2))
 
-    print("\nLooking into {}".format(band))# Print band then average value
-    print("Mean IBC in NS: {}".format(ibc_df['NS']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean())) 
-    print("Mean IBC in ES: {}".format(ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean())) 
-    print("\n")
+    # print("\nLooking into {}".format(band))# Print band then average value
+    # print("Mean IBC in NS: {}".format(ibc_df['NS']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean())) 
+    # print("Mean IBC in ES: {}".format(ibc_df['ES']["ccorr"][fqb2idx[band]][:, 0:n_ch, n_ch:2*n_ch].mean())) 
+    # print("\n")
     
-    print(scipy.stats.shapiro(conVal_freqSub_NS))
-    print(scipy.stats.shapiro(conVal_freqSub_ES))
-
-    print('normaltest teststat = {} pvalue = {}'.format(*scipy.stats.normaltest(conVal_freqSub_ES)))
-    print('normaltest teststat = {} pvalue = {}'.format(*scipy.stats.normaltest(conVal_freqSub_NS)))
+    print('Shapiro (NS): teststat = {} pvalue = {}'.format(*scipy.stats.shapiro(conVal_freqSub_NS)))
+    print('Shapiro (ES): teststat = {} pvalue = {}'.format(*scipy.stats.shapiro(conVal_freqSub_ES)))
 
     # Conduct Paired Sample T-Test on IBC 
     tstatistic, pvalue= scipy.stats.ttest_rel(conVal_freqSub_NS, conVal_freqSub_ES)
-    print('\tT-Test Pvalue = {}'.format(pvalue))
+    print('\n\tT-Test Pvalue = {}'.format(pvalue))
     if pvalue < 0.05:
         print("\t>>> Significant difference across condition <<<")
     else:
@@ -252,6 +293,16 @@ for band in bands:
 # T-Testing IBC between freq band x ROIs
 # ############ 
 
+def NOR(a, b):
+    if(a == 0) and (b == 0):
+        return True
+    elif(a == 0) and (b == 1):
+        return False
+    elif(a == 1) and (b == 0):
+        return False
+    elif(a == 1) and (b == 1):
+        return False
+
 for band in bands:
     for roi in ROIs.keys():
 
@@ -260,48 +311,47 @@ for band in bands:
         conVal_freqSub_ES = ibc_df['ES']["ccorr"][fqb2idx[band]][:, cut[0], cut[1]].mean(axis=(1, 2))
         conVal_freqSub_NS = ibc_df['NS']["ccorr"][fqb2idx[band]][:, cut[0], cut[1]].mean(axis=(1, 2))
 
-        print("\n{}".format(band))# Print band then average value
-        print("-- {}".format(roi))# Print band then average value
+        print("\nFrequency band: {}".format(freq_bands[band]))# Print band then average value
+        print("Selected sensors: {}\n".format(ROIs[roi]))# Print band then average value
         print("Mean IBC in NS: {}".format(ibc_df['NS']["ccorr"][fqb2idx[band]][:, cut[0], cut[1]].mean())) 
         print("Mean IBC in ES: {}".format(ibc_df['ES']["ccorr"][fqb2idx[band]][:, cut[0], cut[1]].mean())) 
-        
-        # print(scipy.stats.shapiro(conVal_freqSub_NS))
-        # print(scipy.stats.shapiro(conVal_freqSub_ES))
 
-        print('\t--- Test whether a sample differs from a normal distribution.\n\t(H0:sample comes from a normal distribution)')
+        print('\n-> Test whether a sample differs from a normal distribution.\n   (Shapiro-Wilk test if H0 rejected, sample is not normal)')
         
         # First on ES
-        tstatistic, pvalue_ES= scipy.stats.shapiro(conVal_freqSub_ES)
+        tstatistic_ES, pvalue_ES= scipy.stats.shapiro(conVal_freqSub_ES)
         if pvalue_ES < alpha:
             print("\tES - H0 rejected ({}) -> Distribution NON-NORMAL".format(np.round(pvalue_ES, 3)))
         else:
             print("\tES - H0 accepted ({}) -> Distribution NORMAL".format(np.round(pvalue_ES, 3)))
 
         # Now on NS
-        tstatistic, pvalue_NS= scipy.stats.shapiro(conVal_freqSub_NS)
+        tstatistic_ES, pvalue_NS= scipy.stats.shapiro(conVal_freqSub_NS)
         if pvalue_NS < alpha:
             print("\tNS - H0 rejected ({}) -> Distribution NON-NORMAL".format(np.round(pvalue_NS, 3)))
         else:
             print("\tNS - H0 accepted ({}) -> Distribution NORMAL".format(np.round(pvalue_NS, 3)))
 
-        print('\t---')
+        print('\n-> Conduct Test on IBC.')
 
         # Test IBC across conditions
         # If both dataset are normaly distributed: Paired Sample T-Test
-        if pvalue_NS < alpha and pvalue_ES < alpha: 
+        if NOR(pvalue_NS < alpha, pvalue_ES < alpha): 
+            print("Conduct Paired Sample T-Test on IBC")
             tstatistic, pvalue= scipy.stats.ttest_rel(conVal_freqSub_NS, conVal_freqSub_ES)
             print('\tT-Test Pvalue = {}'.format(pvalue))
             if pvalue < 0.05:
-                print("\t> SIGNIFICANT difference across condition")
+                print("\n\t#############\n\t>>> SIGNIFICANT (difference across condition)\n\t#############")
             else:
-                print("\t> Non-significant")    
+                print("\t>>> Non-significant <<<")    
         else: # Conduct non-parametric version of the paired T-test: The Wilcoxon signed-rank test
+            print("Conduct non-parametric version of the paired T-test: The Wilcoxon signed-rank test")
             tstatistic, pvalue = scipy.stats.wilcoxon(conVal_freqSub_NS, conVal_freqSub_ES)
             print('\tWilcoxon Pvalue = {}'.format(pvalue))
             if pvalue < 0.05:
-                print("\n\t#############\n\t> SIGNIFICANT (difference across condition)\n\t#############")
+                print("\n\t#############\n\t>>> SIGNIFICANT (difference across condition)\n\t#############")
             else:
-                print("\t> Non-significant")
+                print("\t>>> Non-significant <<<")
         
 
 
