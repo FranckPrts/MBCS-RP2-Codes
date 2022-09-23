@@ -110,6 +110,8 @@ def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metri
     cnt_es = 0
     cnt_ns = 0
     reject = []
+    dyad_order_es = []
+    dyad_order_ns = []
 
     for file in glob.glob(data_path+"*.npy"):
         #  Assuming the following file convention: dyad_{DYAD#}_condition_{CONDITION}_IBC_{ccorr, plv...}.npy
@@ -137,9 +139,11 @@ def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metri
                 if condi == 'ES':
                     ibc_manifest[condi][ibc_metric][cnt_es] = result
                     cnt_es += 1
+                    dyad_order_es.append(dyad)
                 if condi == 'NS':
                     ibc_manifest[condi][ibc_metric][cnt_ns] = result
                     cnt_ns += 1
+                    dyad_order_ns.append(dyad)
 
     # Reshaping the data so it can be unpacked in its freq dimension easily
     for condi in conditions:
@@ -152,7 +156,9 @@ def create_ibc_manifest(data_path:str, mani_path:str, conditions:list, ibc_metri
         f.write(json_string) 
         f.close()
 
-    return ibc_manifest, reject
+    dyad_order_N_E = [dyad_order_ns, dyad_order_es]
+
+    return ibc_manifest, reject, dyad_order_N_E
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):

@@ -78,7 +78,7 @@ n_ch = len(epo1.info['ch_names'])
 #%% 
 # #### Create the IBC manifest ####
 #  Output is shape (freq_banddyads, sensors(x2), sensors(x2))
-ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
+ibc_df, rejected_dyad, dyad_order_N_E = basicAnalysis_tools.create_ibc_manifest(
     data_path    = ibc_data_path, 
     mani_path    = mani_path, # DOES'T WORK (yet) bc np.arr are multi-dim
     conditions   = conditions,
@@ -90,6 +90,21 @@ ibc_df, rejected_dyad = basicAnalysis_tools.create_ibc_manifest(
     check_for_shape = False, # Leave to false when studying 'SELECTED' freq band
     save         = True
     )   
+
+#%% 
+# ############ Pre-analysis
+# Saving df for TurnTaking analysis (! ONLY W/ 1 Frequency band)
+# ############ß
+
+# Save the dyad order per condition in a CSV
+cut = basicAnalysis_tools.get_ch_idx(roi='Selected_sensors', n_ch=n_ch, quadrant='inter')
+
+pd.DataFrame({
+    'Dyad_NS':dyad_order_N_E[0], 
+    'NS_IBC':ibc_df['NS']['ccorr'][0][:, cut[0], cut[1]].mean(axis=(1, 2)),
+    'Dyad_ES':dyad_order_N_E[1],
+    'ES_IBC':ibc_df['ES']['ccorr'][0][:, cut[0], cut[1]].mean(axis=(1, 2))
+    }).to_csv("../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/ibc_perDyad_perCondi.csv", header=True, index=False)
 
 
 #           ###########   0. averages    ###########
