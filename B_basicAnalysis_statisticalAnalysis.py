@@ -54,14 +54,14 @@ dyads.remove('36') # 36 was removed because of missing channels
 selected_analysis = True
 to_pop_out = []
 for i in freq_bands.keys():
-    if i != 'Selected_freqBand':
+    if i != 'Selected_freqBand_alpha':
         to_pop_out.append(i)
 for i in to_pop_out:
     del freq_bands[i]
 
 to_pop_out = []
 for i in ROIs.keys():
-    if i != 'Selected_sensors':
+    if i != 'Selected_sensors_alpha':
         to_pop_out.append(i)
 for i in to_pop_out:
     del ROIs[i]

@@ -23,10 +23,10 @@ save_path    = "../SNS_Data_Fall_2020/EEG/Cleaned_EEG/MBCS-RP2-Results/"
 
 # Here, choose where to save specific results without overwritting #######
 # complex_sig  = "results_complex_signal/" # All 5 basic freq band
-complex_sig  = "SELECTED_results_complex_signal/" # For specific freq band analysis
+complex_sig  = "SELECTED-ALPHA_results_complex_signal/" # For specific freq band analysis
 
 # ibc_result   = "results_ibc/"
-ibc_result   = "SELECTED_results_ibc/"
+ibc_result   = "SELECTED-ALPHA_results_ibc/"
 
 c_value      = "results_cohensD/"
 psds_result  = "results_psds/"
@@ -59,7 +59,7 @@ freq_bands = OrderedDict(freq_bands)
 to_pop_out = []
 
 for i in freq_bands.keys():
-    if i != 'Selected_freqBand':
+    if i != 'Selected_freqBand_alpha':
         to_pop_out.append(i)
 for i in to_pop_out:
     del freq_bands[i]

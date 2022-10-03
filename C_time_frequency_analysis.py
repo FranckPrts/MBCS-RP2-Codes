@@ -43,7 +43,8 @@ psds_result_allFreq  = "results_psds_allFreq/"
 expConditionDir = ['SNS_ES_cleaned', 'SNS_NS_cleaned']
 conditions      = ['ES', 'NS']
 roles           = ['SPEAKER', 'LISTENER']
-
+# selected_freqB  = [16, 28.0]
+selected_freqB  = [8.0, 12.0]
 #%% 
 
 df_manifest = basicAnalysis_tools.get_analysis_manifest(data_path, expConditionDir, save_to=None)
@@ -132,12 +133,12 @@ plt.legend(loc='upper right', title='Condition / Role')
 del avr_psd
 
 # %%##########
-# Plot PSDs for the beta band only
+# Plot PSDs for the selected band only
 # ############
 
 
 # Zoom into the beta band as defined here (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6633326/) 
-mask_beta = (freq >= 16) & (freq <= 28) 
+mask_beta = (freq >= selected_freqB[0]) & (freq <= selected_freqB[1]) 
 freq_beta = freq[mask_beta]
 
 avr_psd_beta = deepcopy(all_psds)
@@ -249,7 +250,7 @@ fg = FOOOFGroup(
 freq_range = [np.min(freq), np.max(freq)]
 
 # Select which role to look into  
-looking_into_role = 'speaker'
+looking_into_role = 'listener'
 if looking_into_role == 'both roles':
     fooof_psds = all_fooof_psds.mean(0)
 elif looking_into_role == 'speaker':
@@ -260,7 +261,7 @@ else:
     print('Not understood.')
 
 # Fit the power spectrum model across all channels in condition of choice
-looking_into_condi = 'both conditions'
+looking_into_condi = 'ES'
 if looking_into_condi == 'both conditions':
     fg.fit(freq, fooof_psds.mean(axis=0) , freq_range) # To fit all condi in SPEAKER
 elif looking_into_condi == 'ES':
@@ -292,7 +293,13 @@ bands_beta_2 = Bands({
     'beta_5': [24, 26],
     'beta_6': [26, 28]})
 
-unique_band = Bands({'beta':[15, 20], 'beta_2':[15, 20]})
+bands_alpha = Bands({
+    'alpha_1': [8, 10],
+    'alpha_2': [10, 12],
+    'alpha_all': [8, 12]
+    })
+
+# unique_band = Bands({'beta':[15, 20], 'beta_2':[15, 20]})
 
 # # Extract alpha peaks
 # betas = get_band_peak_fg(fg, bands.beta)
@@ -306,7 +313,8 @@ unique_band = Bands({'beta':[15, 20], 'beta_2':[15, 20]})
 # %%##########
 # Plot the topographies across different frequency bands
 # ############
-for bbandd in [bands_beta_1, bands_beta_2]:
+# for bbandd in [bands_beta_1, bands_beta_2]:
+for bbandd in [bands_alpha]:
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     fig.suptitle('Topographic map for beta power\nfor {} in {}'.format(
         looking_into_role, looking_into_condi), 
@@ -324,7 +332,7 @@ for bbandd in [bands_beta_1, bands_beta_2]:
         # Set the plot title
         axes[ind].set_title('[{}-{}] Hz'.format(str(band_def[0]), str(band_def[1])), {'fontsize' : 20})
 
-
+plt.savefig(save_path + 'plots/topographic_freq_domain/' + 'rename.pdf')
 # %%##########
 # Plot model fit
 # ############
