@@ -110,8 +110,7 @@ print('Shapiro (ES): teststat = {} pvalue = {}'.format(*shapiro(tt_es.Interjecti
 # Shapiro (ES): teststat = 0.9790245294570923 pvalue = 0.7271564602851868
 
 #%%
-# For alpha = 0.05, we see that the ES TT distribution is not normal. We will thus conduct
-# the non-parametric version of the paired T-test: The Wilcoxon signed-rank test.
+# Both distribution are normal, we're using a Paired sample t-test
 
 tstatistic, pvalue = wilcoxon(tt_es.Interjection, tt_ns.Interjection)
 print('Paired Student T-Test: p={}, t={}'.format(np.round(pvalue, 3), np.round(tstatistic, 3)))
@@ -146,6 +145,28 @@ print('Pearson moment-product correlation (NS): r={}, p={}'.format(np.round(ns_r
 
     # Pearson moment-product correlation (ES): r=0.174, p=0.35
     # Pearson moment-product correlation (NS): r=0.13, p=0.486
+# %%
+# Compute correlation between count of UNsuccessful 
+# turntaking instance and IBC in 2 criteria (spatial, frequency band)
+
+es_r, es_p = pearsonr(merged_es['UnsuccTT'], merged_es['ES_IBC'])
+print('Pearson moment-product correlation (ES): r={}, p={}'.format(np.round(es_r, 3), np.round(es_p, 3)))
+ns_r, ns_p = pearsonr(merged_ns['UnsuccTT'], merged_ns['NS_IBC'])
+print('Pearson moment-product correlation (NS): r={}, p={}'.format(np.round(ns_r, 3), np.round(ns_p, 3)))
+
+    # Pearson moment-product correlation (ES): r=0.076, p=0.685
+	# Pearson moment-product correlation (NS): r=-0.07, p=0.709
+# %%
+# Compute correlation between count of Interjection
+#  instance and IBC in 2 criteria (spatial, frequency band)
+
+es_r, es_p = pearsonr(merged_es['Interjection'], merged_es['ES_IBC'])
+print('Pearson moment-product correlation (ES): r={}, p={}'.format(np.round(es_r, 3), np.round(es_p, 3)))
+ns_r, ns_p = pearsonr(merged_ns['Interjection'], merged_ns['NS_IBC'])
+print('Pearson moment-product correlation (NS): r={}, p={}'.format(np.round(ns_r, 3), np.round(ns_p, 3)))
+
+    # Pearson moment-product correlation (ES): r=-0.076, p=0.686
+	# Pearson moment-product correlation (NS): r=0.183, p=0.326
 
 #%%
 stacked_IBC_TT = merged_es
@@ -158,11 +179,17 @@ stacked_IBC_TT = pd.concat([stacked_IBC_TT, tmp], axis=0, ignore_index=True)
 
 del tmp
 
-
-
 #%%
 sns.relplot(data=stacked_IBC_TT, x="SuccTT", y="IBC", hue="Condition").set(title='Count of successful turn-taking against IBC\nn=31')
 plt.savefig(save_plot_path + 'SuccTT-vs-IBC_bothCondi.pdf')
+
+#%%
+sns.relplot(data=stacked_IBC_TT, x="UnsuccTT", y="IBC", hue="Condition").set(title='Count of successful turn-taking against IBC\nn=31')
+plt.savefig(save_plot_path + 'UnsuccTT-vs-IBC_bothCondi.pdf')
+
+#%%
+sns.relplot(data=stacked_IBC_TT, x="Interjection", y="IBC", hue="Condition").set(title='Count of successful turn-taking against IBC\nn=31')
+plt.savefig(save_plot_path + 'Interjection-vs-IBC_bothCondi.pdf')
 
 
 #%%
@@ -170,3 +197,6 @@ plt.savefig(save_plot_path + 'SuccTT-vs-IBC_bothCondi.pdf')
 # sns.scatterplot(merged_ns['SuccTT'], merged_ns['NS_IBC']).set(title='IBC ')
 
 # sns.regplot(x="SuccTT", y="ES_IBC", data=merged_es) # Not using this since there is no correlation
+
+
+# ax = sns.barplot(x="day", y="total_bill", hue="sex", data=stacked_IBC_TT, palette="winter_r")
