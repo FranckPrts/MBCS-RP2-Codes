@@ -47,27 +47,10 @@ class import_set_custom ():
 
         # reading the epoch file
         self.eeg = mne.io.read_epochs_eeglab(self.path).pick_channels(self.ch_to_keep, ordered=False)
+        self.sfreq = self.eeg.info['sfreq']
         # selecting channels of interest
         # self.eeg = self.eeg.copy()
 
-    def create_epoch(self):
-        epochs_S1 = mne.Epochs(
-            
-            raw=raw_parent, 
-            events=events,
-            event_id=event_id,
-
-            tmin=epochs_tmin, tmax=epochs_tmax,
-            
-            metadata=metadata,
-            
-            event_repeated= 'merge',
-            baseline=None,
-
-            # reject=reject, 
-            preload=True)
-
-        pass
     
     def read_set_events(self, path, ignore_fields=None):
         
@@ -102,24 +85,13 @@ class import_set_custom ():
         ignore_fields = list() if ignore_fields is None else ignore_fields
         take_fields.extend([col for col in df.columns if not
                         (col in take_fields or col in ignore_fields)])
-        
+                
         return df.loc[:, take_fields]
     
     def event_slider(self, sw_min:float, sw_max:float):
         self.sw_min, self.sw_max = sw_min, sw_max  # Re-assigning sw_min, sw_max in case the first class instentiation didn't
-        assert(sw_min < sw_max), "sw_min < sw_max" 
+        assert(sw_min < sw_max), "Problem: sw_min is greater than sw_max" 
         self.df_sw = self.df.loc[(self.df['epoch_id'] >= sw_min) & (self.df['epoch_id'] <= sw_max)]
-    
-    def convert_EEG_to_MNE(self):
-
-        print("Converting EEG data to mne.Raw ..."
-        "\n\tUsing effective time window [{} - {}]"
-        "\n\tHere, from epoch #{} to #{}.".format(
-            self.sw_min, self.sw_max,
-            self.df_sw["epoch"].iat[0], self.df_sw["epoch"].iat[-1]))
-        
-        self.custom_event_to_MNE()
-        self.create_custom_metadata()        
 
     def custom_event_to_MNE(self):
         events = self.df_sw
@@ -133,23 +105,44 @@ class import_set_custom ():
         events_selected['dontuse'] = 0                                      # Add necessary 'dontuse' column
         events_selected = events_selected[['latency', 'dontuse', 'epoch']]  # Reorder the columns
 
+        self.event_id_sw = list()
+        for i in events_selected['epoch'].unique():
+            self.event_id_sw = str(i) 
+
         self.df_sw_mne = events_selected.to_numpy()
 
     def create_custom_metadata(self):
-            event_id = {}
-            meta_tmin, meta_tmax = 0.0, 1.0 # In seconds
+    
 
-            # Define our ecode of interrest 
-            # ecodeOI = ['10022', '501024']
+        meta_tmin, meta_tmax = 0.0, 1.0 # In seconds
 
-            metadata, events, event_id = mne.epochs.make_metadata(
-                
-                events=self.df_sw_mne,
-                event_id=event_id,
-                tmin= meta_tmin, tmax= meta_tmax,
-                # row_events=ecodeOI, # select only event of choices
-                )
+        # Define our ecode of interrest 
+        # ecodeOI = ['10022', '501024']
 
-            events = events.astype(int)
+        self.metadata_sw, events_sw, event_id = mne.epochs.make_metadata(
+            
+            events=self.df_sw_mne,
+            event_id=self.event_id_sw,
+            tmin= meta_tmin, tmax= meta_tmax,
+            sfreq=self.sfreq
+            # row_events=ecodeOI, # select only event of choices
+            )
 
-            metadata.head()
+        events = events.astype(int)
+
+        self.metadata_sw.head()
+    
+    def convert_EEG_to_MNE(self):
+
+        print("Converting EEG data to mne.Raw ..."
+        "\n\tUsing effective time window [{} - {}]"
+        "\n\tHere, from epoch #{} to #{}.".format(
+            self.sw_min, self.sw_max,
+            self.df_sw["epoch"].iat[0], self.df_sw["epoch"].iat[-1]))
+        
+        self.custom_event_to_MNE()
+        # self.create_custom_metadata()    
+
+        self.mne_epo_sw = self.eeg[self.event_id_sw]  
+        print('Done', self.mne_epo_sw)
+        

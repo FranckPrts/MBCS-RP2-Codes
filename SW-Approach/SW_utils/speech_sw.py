@@ -14,8 +14,6 @@ returns the difference.
 import json
 # from cv2 import mean
 
-import numpy as np
-
 from flair.embeddings import TransformerWordEmbeddings
 from flair.data import Sentence
 from sympy import EX
