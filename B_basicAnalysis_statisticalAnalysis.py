@@ -48,25 +48,29 @@ bands       = freq_bands.keys()
 dyads.remove('36') # 36 was removed because of missing channels
 
 # %% #############################################################
-# Uncoment only to use the 'Selected' freq band #######
+# Uncoment only to use the 'Selected' freq band / sensors  #######
 # ################################################################
 
+selected_sensors  = 'Selected_sensors_alpha2'
+selected_freqBand = 'Selected_freqBand_alpha2'
 selected_analysis = True
+
 to_pop_out = []
 for i in freq_bands.keys():
-    if i != 'Selected_freqBand_alpha':
+    if i != selected_freqBand:
         to_pop_out.append(i)
 for i in to_pop_out:
     del freq_bands[i]
 
 to_pop_out = []
 for i in ROIs.keys():
-    if i != 'Selected_sensors_alpha':
+    if i != selected_sensors:
         to_pop_out.append(i)
 for i in to_pop_out:
     del ROIs[i]
 del to_pop_out
 
+assert len(ROIs)!=0, "Dictionary ROIs is empty"
 # ################################################################
 # ################################################################
 #%% 
@@ -94,10 +98,10 @@ ibc_df, rejected_dyad, dyad_order_N_E = basicAnalysis_tools.create_ibc_manifest(
 #%% 
 # ############ Pre-analysis
 # Saving df for TurnTaking analysis (! ONLY W/ 1 Frequency band)
-# ############ß
+# ############
 
 # Save the dyad order per condition in a CSV
-cut = basicAnalysis_tools.get_ch_idx(roi='Selected_sensors', n_ch=n_ch, quadrant='inter')
+cut = basicAnalysis_tools.get_ch_idx(roi=selected_sensors, n_ch=n_ch, quadrant='inter')
 
 pd.DataFrame({
     'Dyad_NS':dyad_order_N_E[0], 
@@ -211,7 +215,8 @@ ibc_5freq_2condi_long = pd.melt(ibc_5freq_2condi, id_vars=['condition'],var_name
 g = sns.FacetGrid(ibc_5freq_2condi_long, col="condition", hue="FrequencyBand")
 g.map(sns.histplot, "ibc")#, hue='FrequencyBand')
 if save_plot:
-    plt.savefig('{}IBC_distrib/all_ch/IBC_distrib_allFreqband_allChans_perCondition.{}'.format(fig_save_path, save_format))
+    # plt.savefig('{}IBC_distrib/all_ch/IBC_distrib_allFreqband_allChans_perCondition.{}'.format(fig_save_path, save_format))
+    plt.savefig('{}alpha_1_analysis/.{}'.format(fig_save_path, save_format))
 
 #%% 
 # ############ 1.5
